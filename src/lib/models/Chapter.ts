@@ -1,6 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-export type ChapterStatus = "pending" | "crawled" | "error";
+export type ChapterStatus = "pending" | "crawling" | "crawled" | "error";
 
 export interface IChapter extends Document {
   _id: mongoose.Types.ObjectId;
@@ -25,7 +25,7 @@ const ChapterSchema = new Schema<IChapter>(
     pageCount: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ["pending", "crawled", "error"],
+      enum: ["pending", "crawling", "crawled", "error"],
       default: "pending",
     },
     errorMessage: { type: String, default: undefined },
