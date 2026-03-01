@@ -1,0 +1,162 @@
+.page {
+  min-height: 100dvh;
+}
+
+/* ── Glassmorphism header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.backBtn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.title {
+  font-family: var(--font-display), sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ── Form card ── */
+.form {
+  max-width: 500px;
+  margin: 24px auto;
+  padding: 24px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (max-width: 540px) {
+  .form {
+    margin: 16px;
+    border-radius: var(--radius);
+  }
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:disabled {
+  opacity: 0.5;
+}
+
+/* ── Error display ── */
+.error {
+  font-size: 13px;
+  color: var(--error);
+  padding: 10px 14px;
+  background: rgba(232, 93, 111, 0.1);
+  border: 1px solid rgba(232, 93, 111, 0.15);
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+
+/* ── Submit button ── */
+.button {
+  height: 48px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 16px var(--accent-glow);
+  transition: box-shadow var(--transition-fast), opacity var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.button:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(232, 168, 73, 0.35);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Sakura petal spinner ── */
+.spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  animation: petal-spin 1.2s ease-in-out infinite;
+}
+
+.spinner svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Hint text ── */
+.hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+  line-height: 1.5;
+}

@@ -1,0 +1,382 @@
+/* ── Backdrop ─────────────────────────────────── */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-smooth);
+}
+
+.backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Drawer ───────────────────────────────────── */
+
+.drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-bottom: none;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow:
+    0 -8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--glass-border);
+  padding: 0 20px 24px;
+  transform: translateY(100%);
+  transition: transform var(--transition-smooth);
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+
+.drawer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.drawer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.drawer::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: var(--radius-pill);
+}
+
+.drawer.visible {
+  transform: translateY(0);
+}
+
+/* ── Drag Handle ──────────────────────────────── */
+
+.dragHandle {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 8px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.dragPill {
+  width: 40px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
+}
+
+/* ── Sections ─────────────────────────────────── */
+
+.section {
+  margin-top: 20px;
+}
+
+.section:first-of-type {
+  margin-top: 12px;
+}
+
+.sectionLabel {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+/* ── Reading Mode Buttons ─────────────────────── */
+
+.modeRow {
+  display: flex;
+  gap: 8px;
+}
+
+.modeBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 60px;
+  height: 48px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+  padding: 0;
+}
+
+.modeBtn:hover {
+  background: var(--bg-hover);
+}
+
+.modeBtn.active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.modeIcon {
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modeLabel {
+  font-family: var(--font-body);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ── Slider (Brightness / Speed) ──────────────── */
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.sliderIcon {
+  font-size: 16px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  outline: none;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.slider::-moz-range-track {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  border: none;
+}
+
+/* ── Background Circles ───────────────────────── */
+
+.bgRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.bgCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.bgCircle.active {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.bgBlack {
+  background: var(--reader-black);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.bgDark {
+  background: var(--reader-dark);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.bgSepia {
+  background: var(--reader-sepia);
+}
+
+.bgWhite {
+  background: var(--reader-white);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+/* ── Pill Buttons (Image Fit) ─────────────────── */
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.pill {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.pill:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.pill.active {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Toggle Switch ────────────────────────────── */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.toggleRow + .toggleRow {
+  border-top: 1px solid var(--glass-border);
+}
+
+.toggleLabel {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.toggle.on {
+  background: var(--accent);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform var(--transition-fast);
+}
+
+.toggle.on .toggleKnob {
+  transform: translateX(20px);
+}
+
+/* ── Speed section (conditional) ──────────────── */
+
+.speedSection {
+  margin-top: 10px;
+}
+
+.sliderLabel {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+/* ── Sub-section spacing inside Anzeige ────────── */
+
+.subSection {
+  margin-top: 14px;
+}
+
+.subSection:first-child {
+  margin-top: 0;
+}
+
+.subLabel {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+/* ── Safe area bottom padding ─────────────────── */
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .drawer {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+}

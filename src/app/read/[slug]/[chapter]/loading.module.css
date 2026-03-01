@@ -1,0 +1,21 @@
+/* Reader loading — centered sakura spinner */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  background: var(--bg-primary);
+  gap: 20px;
+}
+
+.spinner {
+  animation: petal-spin 2s ease-in-out infinite;
+}
+
+.text {
+  font-family: var(--font-body), sans-serif;
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}

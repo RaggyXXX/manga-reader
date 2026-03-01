@@ -1,0 +1,138 @@
+.container {
+  background: #000;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+.topBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease;
+}
+
+.topBar.hidden {
+  transform: translateY(-100%);
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 22px;
+  padding: 4px 8px;
+}
+
+.topTitle {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.pageIndicator {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.imageContainer {
+  padding-top: 48px;
+  padding-bottom: 60px;
+}
+
+.image {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: pinch-zoom;
+}
+
+.endBanner {
+  padding: 40px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nextBtn {
+  padding: 12px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.nextBtn:hover {
+  background: var(--accent-hover);
+}
+
+.endText {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.bottomBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease;
+}
+
+.bottomBar.hidden {
+  transform: translateY(100%);
+}
+
+.navBtn {
+  padding: 6px 14px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.navBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.chapterLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .bottomBar {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+}

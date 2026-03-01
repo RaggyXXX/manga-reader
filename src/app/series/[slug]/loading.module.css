@@ -1,0 +1,46 @@
+/* Series detail loading skeleton */
+.page {
+  min-height: 100dvh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.infoCard {
+  margin: 16px;
+  padding: 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  gap: 16px;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.chapterList {
+  display: flex;
+  flex-direction: column;
+}
+
+.chapterItem {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.chapterItem:last-child {
+  border-bottom: none;
+}
