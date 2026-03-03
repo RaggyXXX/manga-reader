@@ -1,7 +1,7 @@
 const ALLORIGINS_GET = "https://api.allorigins.win/get?url=";
 const ALLORIGINS_RAW = "https://api.allorigins.win/raw?url=";
 const IMAGE_PROXY_BASE = "/api/proxy?url=";
-const REQUEST_DELAY = 1500;
+const REQUEST_DELAY = 500;
 
 export function imageProxyUrl(url: string): string {
   return IMAGE_PROXY_BASE + encodeURIComponent(url);
