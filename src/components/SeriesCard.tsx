@@ -10,8 +10,6 @@ interface SeriesCardProps {
   title: string;
   coverUrl?: string;
   totalChapters: number;
-  crawledChapters: number;
-  status: string;
 }
 
 export function SeriesCard({
@@ -19,8 +17,6 @@ export function SeriesCard({
   title,
   coverUrl,
   totalChapters,
-  crawledChapters,
-  status,
 }: SeriesCardProps) {
   const [readCount, setReadCount] = useState(0);
 
@@ -36,7 +32,7 @@ export function SeriesCard({
         {/* Cover image or placeholder */}
         {coverUrl ? (
           <img
-            src={`/api/img?url=${encodeURIComponent(coverUrl)}`}
+            src={`/api/proxy?url=${encodeURIComponent(coverUrl)}`}
             alt={title}
             className={styles.cover}
             loading="lazy"
@@ -61,11 +57,6 @@ export function SeriesCard({
           </span>
           <h3 className={styles.name}>{title}</h3>
         </div>
-
-        {/* Discovering badge */}
-        {status === "discovering" && (
-          <div className={styles.badge}>Discovering</div>
-        )}
 
         {/* Thin progress bar at the very bottom */}
         {readCount > 0 && (

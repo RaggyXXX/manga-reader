@@ -1,15 +1,22 @@
+"use client";
+
 import Link from "next/link";
 import styles from "./page.module.css";
-import { connectDB } from "@/lib/db";
-import Series from "@/lib/models/Series";
+import { getAllSeries, type StoredSeries } from "@/lib/manga-store";
 import { SeriesCard } from "@/components/SeriesCard";
 import { ContinueReading } from "@/components/ContinueReading";
+import { useEffect, useState } from "react";
 
-export const dynamic = "force-dynamic";
+export default function LibraryPage() {
+  const [series, setSeries] = useState<StoredSeries[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-export default async function LibraryPage() {
-  await connectDB();
-  const series = await Series.find({}).sort({ updatedAt: -1 }).lean();
+  useEffect(() => {
+    setSeries(getAllSeries());
+    setLoaded(true);
+  }, []);
+
+  if (!loaded) return null;
 
   const isEmpty = series.length === 0;
 
@@ -155,13 +162,11 @@ export default async function LibraryPage() {
         <div className={styles.grid}>
           {series.map((s) => (
             <SeriesCard
-              key={s._id.toString()}
+              key={s.slug}
               slug={s.slug}
               title={s.title}
               coverUrl={s.coverUrl}
               totalChapters={s.totalChapters}
-              crawledChapters={s.crawledChapters}
-              status={s.status}
             />
           ))}
         </div>
