@@ -1,7 +1,5 @@
-const HTML_PROXIES = [
-  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url: string) => `/api/proxy?url=${encodeURIComponent(url)}`,
-];
+const ALLORIGINS_GET = "https://api.allorigins.win/get?url=";
+const ALLORIGINS_RAW = "https://api.allorigins.win/raw?url=";
 const IMAGE_PROXY_BASE = "/api/proxy?url=";
 const REQUEST_DELAY = 1500;
 
@@ -10,28 +8,57 @@ export function imageProxyUrl(url: string): string {
 }
 
 async function fetchHtml(url: string): Promise<Document> {
-  let lastError: Error | null = null;
+  const errors: string[] = [];
 
-  for (const makeUrl of HTML_PROXIES) {
-    try {
-      const resp = await fetch(makeUrl(url));
-      if (!resp.ok) {
-        lastError = new Error(`Failed to fetch: ${resp.status}`);
-        continue;
+  // Strategy 1: allorigins /get (JSON wrapper — most reliable)
+  try {
+    const resp = await fetch(ALLORIGINS_GET + encodeURIComponent(url));
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.contents && json.contents.length > 200) {
+        return new DOMParser().parseFromString(json.contents, "text/html");
       }
-      const text = await resp.text();
-      if (!text || text.length < 200) {
-        lastError = new Error("Empty or too-short response");
-        continue;
-      }
-      const parser = new DOMParser();
-      return parser.parseFromString(text, "text/html");
-    } catch (e) {
-      lastError = e instanceof Error ? e : new Error(String(e));
+      errors.push("allorigins/get: empty contents");
+    } else {
+      errors.push(`allorigins/get: ${resp.status}`);
     }
+  } catch (e) {
+    errors.push(`allorigins/get: ${e instanceof Error ? e.message : e}`);
   }
 
-  throw lastError || new Error("All proxies failed");
+  // Strategy 2: allorigins /raw (direct HTML)
+  try {
+    const resp = await fetch(ALLORIGINS_RAW + encodeURIComponent(url));
+    if (resp.ok) {
+      const text = await resp.text();
+      if (text && text.length > 200) {
+        return new DOMParser().parseFromString(text, "text/html");
+      }
+      errors.push("allorigins/raw: empty response");
+    } else {
+      errors.push(`allorigins/raw: ${resp.status}`);
+    }
+  } catch (e) {
+    errors.push(`allorigins/raw: ${e instanceof Error ? e.message : e}`);
+  }
+
+  // Strategy 3: our own proxy (works when not blocked by Cloudflare)
+  try {
+    const resp = await fetch(IMAGE_PROXY_BASE + encodeURIComponent(url));
+    if (resp.ok) {
+      const text = await resp.text();
+      if (text && text.length > 200) {
+        return new DOMParser().parseFromString(text, "text/html");
+      }
+      errors.push("proxy: empty response");
+    } else {
+      errors.push(`proxy: ${resp.status}`);
+    }
+  } catch (e) {
+    errors.push(`proxy: ${e instanceof Error ? e.message : e}`);
+  }
+
+  throw new Error(`All proxies failed: ${errors.join("; ")}`);
 }
 
 function delay(ms: number): Promise<void> {
