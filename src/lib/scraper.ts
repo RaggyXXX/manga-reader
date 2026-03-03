@@ -158,7 +158,7 @@ export async function scrapeChapterImages(chapterUrl: string): Promise<string[]>
   for (const img of imgElements) {
     const src = img.getAttribute("data-src") || img.getAttribute("data-lazy-src") || img.getAttribute("src") || "";
 
-    if (!src || src.includes("1x1.webp") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
+    if (!src || src.includes("1x1.webp") || src.includes("fallback") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
       continue;
     }
 

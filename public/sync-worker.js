@@ -100,7 +100,7 @@ function extractImages(html) {
   let m;
   while ((m = imgRe.exec(section)) !== null) {
     const src = m[1];
-    if (!src || src.includes("1x1.webp") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
+    if (!src || src.includes("1x1.webp") || src.includes("fallback") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
       continue;
     }
     if (src.includes("manhwatop.com") || src.includes("manhwazone.to/uploads") || isLikelyMangaImage(src)) {
@@ -113,7 +113,7 @@ function extractImages(html) {
   while ((m = dataSrcRe.exec(section)) !== null) {
     const src = m[1];
     if (images.includes(src)) continue;
-    if (!src || src.includes("1x1.webp") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
+    if (!src || src.includes("1x1.webp") || src.includes("fallback") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
       continue;
     }
     if (src.includes("manhwatop.com") || src.includes("manhwazone.to/uploads") || isLikelyMangaImage(src)) {

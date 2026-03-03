@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
+const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
 const ALLORIGINS_GET = "https://api.allorigins.win/get?url=";
 const ALLORIGINS_RAW = "https://api.allorigins.win/raw?url=";
 
