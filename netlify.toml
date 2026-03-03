@@ -6,7 +6,7 @@
   package = "@netlify/plugin-nextjs"
 
 [[headers]]
-  for = "/api/img"
+  for = "/api/proxy"
   [headers.values]
     Cache-Control = "public, max-age=86400, immutable"
 

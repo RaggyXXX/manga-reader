@@ -153,7 +153,7 @@ export default function RtlReader({
     [goPrev]
   );
 
-  const proxyUrl = (url: string) => `/api/img?url=${encodeURIComponent(url)}`;
+  const proxyUrl = (url: string) => `/api/proxy?url=${encodeURIComponent(url)}`;
   const fitClass = getFitClass(imageFitMode);
 
   return (

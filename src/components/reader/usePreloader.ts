@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 function proxyUrl(originalUrl: string): string {
-  return `/api/img?url=${encodeURIComponent(originalUrl)}`;
+  return `/api/proxy?url=${encodeURIComponent(originalUrl)}`;
 }
 
 export function usePreloader(

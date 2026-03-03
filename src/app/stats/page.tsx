@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getReadingStats, type ReadingStats } from "@/lib/reading-progress";
+import { getAllSeries, deleteSeries as deleteStoredSeries, getChapters } from "@/lib/manga-store";
 import styles from "./page.module.css";
 
 function formatRelativeTime(timestamp: number): string {
@@ -170,10 +171,30 @@ function EmptyBookIcon() {
 export default function StatsPage() {
   const router = useRouter();
   const [stats, setStats] = useState<ReadingStats | null>(null);
+  const [seriesList, setSeriesList] = useState<Array<{ slug: string; title: string; cachedCount: number; totalChapters: number }>>([]);
 
   useEffect(() => {
     setStats(getReadingStats());
+    const all = getAllSeries();
+    setSeriesList(all.map((s) => ({
+      slug: s.slug,
+      title: s.title,
+      cachedCount: getChapters(s.slug).filter((ch) => ch.imageUrls.length > 0).length,
+      totalChapters: s.totalChapters || getChapters(s.slug).length,
+    })));
   }, []);
+
+  const handleClearSeries = (slug: string) => {
+    deleteStoredSeries(slug);
+    setSeriesList((prev) => prev.filter((s) => s.slug !== slug));
+  };
+
+  const handleClearAll = () => {
+    for (const s of seriesList) {
+      deleteStoredSeries(s.slug);
+    }
+    setSeriesList([]);
+  };
 
   if (!stats) return null; // loading from localStorage
 
@@ -278,6 +299,59 @@ export default function StatsPage() {
           </p>
         </div>
       )}
+
+      {/* Offline Storage Section */}
+      <section className={styles.seriesSection} style={{ marginTop: "2rem" }}>
+        <h2 className={styles.seriesSectionTitle}>Offline-Speicher</h2>
+        {seriesList.length === 0 ? (
+          <p style={{ color: "var(--text-muted)", padding: "1rem 0" }}>Keine gespeicherten Serien</p>
+        ) : (
+          <>
+            <div className={styles.seriesList}>
+              {seriesList.map((s) => (
+                <div key={s.slug} className={styles.seriesItem}>
+                  <div className={styles.seriesTop}>
+                    <span className={styles.seriesName}>{s.title}</span>
+                    <span className={styles.seriesDetail}>
+                      {s.cachedCount} / {s.totalChapters} Kapitel gecacht
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleClearSeries(s.slug)}
+                    style={{
+                      marginTop: "0.5rem",
+                      padding: "0.4rem 0.8rem",
+                      background: "var(--bg-elevated)",
+                      color: "var(--text-secondary)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cache loeschen
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={handleClearAll}
+              style={{
+                marginTop: "1rem",
+                padding: "0.5rem 1rem",
+                background: "var(--error)",
+                color: "white",
+                border: "none",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "0.85rem",
+                cursor: "pointer",
+              }}
+            >
+              Alles loeschen
+            </button>
+          </>
+        )}
+      </section>
     </div>
   );
 }

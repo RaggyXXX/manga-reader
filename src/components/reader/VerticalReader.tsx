@@ -136,7 +136,7 @@ export default function VerticalReader({
             key={`${url}-${i}`}
             ref={(el) => setImageRef(el, i)}
             data-index={i}
-            src={`/api/img?url=${encodeURIComponent(url)}`}
+            src={`/api/proxy?url=${encodeURIComponent(url)}`}
             alt={`Seite ${i + 1}`}
             className={`${styles.image} ${fitClass}`}
             loading={i < 3 ? "eager" : "lazy"}

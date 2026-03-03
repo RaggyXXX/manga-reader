@@ -80,7 +80,7 @@ export function ContinueReading({ series }: ContinueReadingProps) {
               : 0;
 
           const coverSrc = item.coverUrl
-            ? `/api/img?url=${encodeURIComponent(item.coverUrl)}`
+            ? `/api/proxy?url=${encodeURIComponent(item.coverUrl)}`
             : undefined;
 
           return (

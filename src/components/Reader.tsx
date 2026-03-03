@@ -162,7 +162,7 @@ export function Reader({
             key={i}
             ref={(el) => { imageRefs.current[i] = el; }}
             data-index={i}
-            src={`/api/img?url=${encodeURIComponent(url)}`}
+            src={`/api/proxy?url=${encodeURIComponent(url)}`}
             alt={`Seite ${i + 1}`}
             className={styles.image}
             loading={i < 3 ? "eager" : "lazy"}
