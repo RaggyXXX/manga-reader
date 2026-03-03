@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "cdn.manhwazone.to" },
     ],
   },
-  serverExternalPackages: ["puppeteer-core", "puppeteer-extra", "puppeteer-extra-plugin-stealth", "@sparticuz/chromium-min"],
   async headers() {
     return [
       {
