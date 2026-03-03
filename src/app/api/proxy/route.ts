@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
-const ALLORIGINS_GET = "https://api.allorigins.win/get?url=";
-const ALLORIGINS_RAW = "https://api.allorigins.win/raw?url=";
+// Multiple allorigins mirrors for reliability
+const ALLORIGINS_SERVICES = [
+  { get: "https://api.allorigins.win/get?url=", raw: "https://api.allorigins.win/raw?url=" },
+  { get: "https://api.allorigins.hexlet.app/get?url=", raw: "https://api.allorigins.hexlet.app/raw?url=" },
+];
 
-const FETCH_TIMEOUT = 15000;
+const FETCH_TIMEOUT = 12000;
 
 async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
@@ -19,29 +22,37 @@ async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Re
   }
 }
 
+function isErrorPage(html: string): boolean {
+  return html.includes("<title>Not Found") || html.includes("<title>Just a moment") || html.includes("cf-challenge");
+}
+
 /** For HTML pages: fetch via allorigins server-side (bypasses Cloudflare + no CORS issues) */
 async function fetchHtmlViaAllorigins(url: string): Promise<string | null> {
-  // Strategy 1: allorigins /get (JSON wrapper)
-  try {
-    const resp = await fetchWithTimeout(ALLORIGINS_GET + encodeURIComponent(url));
-    if (resp.ok) {
-      const json = await resp.json();
-      if (json.contents && json.contents.length > 200) {
-        return json.contents;
-      }
-    }
-  } catch { /* fall through */ }
+  const encoded = encodeURIComponent(url);
 
-  // Strategy 2: allorigins /raw
-  try {
-    const resp = await fetchWithTimeout(ALLORIGINS_RAW + encodeURIComponent(url));
-    if (resp.ok) {
-      const text = await resp.text();
-      if (text && text.length > 200) {
-        return text;
+  for (const service of ALLORIGINS_SERVICES) {
+    // Try /get (JSON wrapper)
+    try {
+      const resp = await fetchWithTimeout(service.get + encoded);
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json.contents && json.contents.length > 200 && !isErrorPage(json.contents)) {
+          return json.contents;
+        }
       }
-    }
-  } catch { /* fall through */ }
+    } catch { /* fall through */ }
+
+    // Try /raw
+    try {
+      const resp = await fetchWithTimeout(service.raw + encoded);
+      if (resp.ok) {
+        const text = await resp.text();
+        if (text && text.length > 200 && !isErrorPage(text)) {
+          return text;
+        }
+      }
+    } catch { /* fall through */ }
+  }
 
   return null;
 }
