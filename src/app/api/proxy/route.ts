@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
-// Multiple allorigins mirrors for reliability
-const ALLORIGINS_SERVICES = [
-  { get: "https://api.allorigins.win/get?url=", raw: "https://api.allorigins.win/raw?url=" },
-  { get: "https://api.allorigins.hexlet.app/get?url=", raw: "https://api.allorigins.hexlet.app/raw?url=" },
-];
 
-const FETCH_TIMEOUT = 12000;
+const FETCH_TIMEOUT = 15000;
 
 async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
@@ -23,37 +18,121 @@ async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Re
 }
 
 function isErrorPage(html: string): boolean {
-  return html.includes("<title>Not Found") || html.includes("<title>Just a moment") || html.includes("cf-challenge");
+  return (
+    html.includes("<title>Not Found") ||
+    html.includes("<title>Just a moment") ||
+    html.includes("cf-challenge") ||
+    html.includes("<title>Access denied") ||
+    html.includes("<title>Error") ||
+    html.includes("<!DOCTYPE html>\n<html>\n<head>\n<style>") // corsproxy error page
+  );
 }
 
-/** For HTML pages: fetch via allorigins server-side (bypasses Cloudflare + no CORS issues) */
-async function fetchHtmlViaAllorigins(url: string): Promise<string | null> {
-  const encoded = encodeURIComponent(url);
+function isValidHtml(html: string | null | undefined): html is string {
+  return !!html && html.length > 200 && !isErrorPage(html);
+}
 
-  for (const service of ALLORIGINS_SERVICES) {
-    // Try /get (JSON wrapper)
-    try {
-      const resp = await fetchWithTimeout(service.get + encoded);
-      if (resp.ok) {
+// --- Proxy service definitions ---
+
+interface ProxyService {
+  name: string;
+  buildUrl: (targetUrl: string) => string;
+  extractHtml: (resp: Response) => Promise<string | null>;
+}
+
+const PROXY_SERVICES: ProxyService[] = [
+  {
+    name: "allorigins-win-get",
+    buildUrl: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    extractHtml: async (resp) => {
+      try {
         const json = await resp.json();
-        if (json.contents && json.contents.length > 200 && !isErrorPage(json.contents)) {
-          return json.contents;
-        }
-      }
-    } catch { /* fall through */ }
+        return json.contents || null;
+      } catch { return null; }
+    },
+  },
+  {
+    name: "allorigins-hexlet-get",
+    buildUrl: (url) => `https://api.allorigins.hexlet.app/get?url=${encodeURIComponent(url)}`,
+    extractHtml: async (resp) => {
+      try {
+        const json = await resp.json();
+        return json.contents || null;
+      } catch { return null; }
+    },
+  },
+  {
+    name: "corsproxy-io",
+    buildUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    extractHtml: async (resp) => resp.text(),
+  },
+  {
+    name: "allorigins-win-raw",
+    buildUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    extractHtml: async (resp) => resp.text(),
+  },
+  {
+    name: "allorigins-hexlet-raw",
+    buildUrl: (url) => `https://api.allorigins.hexlet.app/raw?url=${encodeURIComponent(url)}`,
+    extractHtml: async (resp) => resp.text(),
+  },
+];
 
-    // Try /raw
+/** Try all proxy services to fetch HTML */
+async function fetchHtmlViaProxies(url: string): Promise<string | null> {
+  for (const service of PROXY_SERVICES) {
     try {
-      const resp = await fetchWithTimeout(service.raw + encoded);
+      const proxyUrl = service.buildUrl(url);
+      const resp = await fetchWithTimeout(proxyUrl);
       if (resp.ok) {
-        const text = await resp.text();
-        if (text && text.length > 200 && !isErrorPage(text)) {
-          return text;
+        const html = await service.extractHtml(resp);
+        if (isValidHtml(html)) {
+          return html;
         }
       }
-    } catch { /* fall through */ }
+    } catch {
+      // fall through to next service
+    }
   }
+  return null;
+}
 
+/** Direct fetch with full browser-like headers (last resort for HTML) */
+async function fetchHtmlDirect(url: string): Promise<string | null> {
+  const headers: Record<string, string> = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://manhwazone.to/",
+    "Sec-Ch-Ua": '"Chromium";v="131", "Not_A Brand";v="24"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Cache-Control": "max-age=0",
+  };
+
+  try {
+    const resp = await fetchWithTimeout(url, { headers, redirect: "follow" });
+    if (!resp.ok) return null;
+
+    const contentType = resp.headers.get("content-type") || "";
+    // Cloudflare sometimes returns images (WEBP challenge) instead of HTML
+    if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
+      return null;
+    }
+
+    const text = await resp.text();
+    if (isValidHtml(text)) {
+      return text;
+    }
+  } catch {
+    // fall through
+  }
   return null;
 }
 
@@ -77,9 +156,9 @@ export async function GET(req: NextRequest) {
   const isImage = /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(parsed.pathname);
 
   try {
-    // For HTML requests: try allorigins server-side first (bypasses Cloudflare)
+    // For HTML requests: try proxy services first, then direct fetch
     if (!isImage) {
-      const html = await fetchHtmlViaAllorigins(url);
+      const html = await fetchHtmlViaProxies(url);
       if (html) {
         return new NextResponse(html, {
           headers: {
@@ -89,14 +168,29 @@ export async function GET(req: NextRequest) {
           },
         });
       }
+
+      // Last resort: direct fetch with full browser headers
+      const directHtml = await fetchHtmlDirect(url);
+      if (directHtml) {
+        return new NextResponse(directHtml, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache",
+          },
+        });
+      }
+
+      return NextResponse.json(
+        { error: "All proxy services failed for this URL" },
+        { status: 502 }
+      );
     }
 
-    // Direct fetch (works for images, fallback for HTML)
+    // Direct fetch for images
     const headers: Record<string, string> = {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      "Accept": isImage
-        ? "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8"
-        : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept": "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.5",
       "Referer": "https://manhwazone.to/",
     };
@@ -108,18 +202,6 @@ export async function GET(req: NextRequest) {
     }
 
     const contentType = resp.headers.get("content-type") || "application/octet-stream";
-    const isHtml = contentType.includes("text/html");
-
-    if (isHtml) {
-      const text = await resp.text();
-      return new NextResponse(text, {
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "no-cache",
-        },
-      });
-    }
 
     return new NextResponse(resp.body, {
       headers: {
