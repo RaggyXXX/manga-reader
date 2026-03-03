@@ -1,21 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Reader from "@/components/reader/Reader";
+import { getChapters, getChapter, saveChapter } from "@/lib/manga-store";
+import { scrapeChapterImages } from "@/lib/scraper";
 import styles from "./page.module.css";
-
-interface ChapterData {
-  _id: string;
-  number: number;
-  title: string;
-  imageUrls: string[];
-  pageCount: number;
-  status: string;
-}
-
-const POLL_INTERVAL = 3000;
-const MAX_POLL_TIME = 120000; // 120s max wait
 
 export default function ReaderPage() {
   const params = useParams();
@@ -23,169 +13,71 @@ export default function ReaderPage() {
   const slug = params.slug as string;
   const chapterNum = parseInt(params.chapter as string, 10);
 
-  const [chapter, setChapter] = useState<ChapterData | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[] | null>(null);
+  const [chapterTitle, setChapterTitle] = useState("");
   const [loading, setLoading] = useState(true);
-  const [crawling, setCrawling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chapterIds, setChapterIds] = useState<Record<number, string>>({});
   const [allChapterNums, setAllChapterNums] = useState<number[]>([]);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const crawlStartRef = useRef<number>(0);
 
-  // Cleanup polling on unmount
+  // Load chapter list for navigation
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
-
-  // Fetch chapter list for navigation
-  useEffect(() => {
-    fetch(`/api/series/${slug}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.chapters) {
-          const ids: Record<number, string> = {};
-          const nums: number[] = [];
-          for (const ch of data.chapters) {
-            ids[ch.number] = ch._id;
-            nums.push(ch.number);
-          }
-          setChapterIds(ids);
-          setAllChapterNums(nums.sort((a, b) => a - b));
-        }
-      })
-      .catch(() => {});
+    const chapters = getChapters(slug);
+    setAllChapterNums(chapters.map((ch) => ch.number).sort((a, b) => a - b));
   }, [slug]);
 
-  // Stop any existing poll
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  }, []);
-
-  // Poll GET until chapter is crawled
-  const startPolling = useCallback(
-    (chapterId: string) => {
-      stopPolling();
-      crawlStartRef.current = Date.now();
-
-      pollRef.current = setInterval(async () => {
-        // Timeout: stop polling after MAX_POLL_TIME
-        if (Date.now() - crawlStartRef.current > MAX_POLL_TIME) {
-          stopPolling();
-          setCrawling(false);
-          setError("Timeout beim Crawlen. Bitte erneut versuchen.");
-          return;
-        }
-
-        try {
-          const res = await fetch(`/api/chapters/${chapterId}`);
-          const data = await res.json();
-
-          if (data.chapter?.status === "crawled" && data.chapter.imageUrls?.length > 0) {
-            stopPolling();
-            setCrawling(false);
-            setChapter(data.chapter);
-            setLoading(false);
-          } else if (data.chapter?.status === "error") {
-            stopPolling();
-            setCrawling(false);
-            setError(data.chapter.errorMessage || "Crawling fehlgeschlagen");
-            setLoading(false);
-          }
-        } catch {
-          // Network error — keep polling
-        }
-      }, POLL_INTERVAL);
-    },
-    [stopPolling]
-  );
-
-  // Fetch chapter: GET first, then POST to trigger crawl if pending
+  // Load current chapter
   const fetchChapter = useCallback(async () => {
-    const chapterId = chapterIds[chapterNum];
-    if (!chapterId) return;
-
     setLoading(true);
     setError(null);
-    setCrawling(false);
-    stopPolling();
 
+    const ch = getChapter(slug, chapterNum);
+    if (!ch) {
+      setError("Kapitel nicht gefunden.");
+      setLoading(false);
+      return;
+    }
+
+    setChapterTitle(ch.title);
+
+    // Already synced — show immediately
+    if (ch.imageUrls.length > 0) {
+      setImageUrls(ch.imageUrls);
+      setLoading(false);
+      return;
+    }
+
+    // Not synced — scrape on-demand
     try {
-      // 1. GET — check current status
-      const res = await fetch(`/api/chapters/${chapterId}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Fehler beim Laden");
-        setLoading(false);
-        return;
+      const images = await scrapeChapterImages(ch.url);
+      if (images.length > 0) {
+        saveChapter(slug, { ...ch, imageUrls: images, syncedAt: Date.now() });
+        setImageUrls(images);
+      } else {
+        setError("Keine Bilder gefunden.");
       }
-
-      const ch = data.chapter;
-
-      // Already crawled — show immediately
-      if (ch.status === "crawled" && ch.imageUrls?.length > 0) {
-        setChapter(ch);
-        setLoading(false);
-        return;
-      }
-
-      // Not crawled — trigger crawl via POST
-      setCrawling(true);
-
-      const crawlRes = await fetch(`/api/chapters/${chapterId}`, { method: "POST" });
-      const crawlData = await crawlRes.json();
-
-      if (crawlRes.ok && crawlData.chapter?.status === "crawled" && crawlData.chapter.imageUrls?.length > 0) {
-        // Crawl completed in time
-        setChapter(crawlData.chapter);
-        setCrawling(false);
-        setLoading(false);
-        return;
-      }
-
-      if (!crawlRes.ok) {
-        setError(crawlData.error || "Crawling fehlgeschlagen");
-        setCrawling(false);
-        setLoading(false);
-        return;
-      }
-
-      // Crawl might still be running — start polling
-      startPolling(chapterId);
     } catch {
-      setError("Netzwerkfehler");
-      setCrawling(false);
+      setError("Fehler beim Laden der Bilder.");
+    } finally {
       setLoading(false);
     }
-  }, [chapterIds, chapterNum, stopPolling, startPolling]);
+  }, [slug, chapterNum]);
 
   useEffect(() => {
-    if (chapterIds[chapterNum]) {
-      fetchChapter();
-    }
-  }, [chapterIds, chapterNum, fetchChapter]);
+    fetchChapter();
+  }, [fetchChapter]);
 
   const currentIndex = allChapterNums.indexOf(chapterNum);
   const prevChapter = currentIndex > 0 ? allChapterNums[currentIndex - 1] : null;
-  const nextChapter =
-    currentIndex < allChapterNums.length - 1 ? allChapterNums[currentIndex + 1] : null;
+  const nextChapter = currentIndex < allChapterNums.length - 1 ? allChapterNums[currentIndex + 1] : null;
 
   const goToChapter = (num: number) => {
-    stopPolling();
-    setChapter(null);
+    setImageUrls(null);
     setLoading(true);
-    setCrawling(false);
     setError(null);
     router.push(`/read/${slug}/${num}`);
   };
 
-  // Loading / Crawling state
-  if ((loading || crawling) && !chapter) {
+  if (loading && !imageUrls) {
     return (
       <div className={styles.loading}>
         <svg className={styles.spinner} width="48" height="48" viewBox="0 0 48 48" fill="none">
@@ -195,12 +87,7 @@ export default function ReaderPage() {
           <path d="M4 24C4 24 13 20 17 20C21 20 24 24 24 24C24 24 21 28 17 28C13 28 4 24 4 24Z" fill="#f2a0b3" opacity="0.8" />
           <circle cx="24" cy="24" r="5" fill="#e8a849" opacity="0.9" />
         </svg>
-        <p>{crawling ? "Kapitel wird gecrawlt..." : "Kapitel wird geladen..."}</p>
-        {crawling && (
-          <p className={styles.hint}>
-            Bilder werden von der Quelle geladen. Dies kann 20-40 Sekunden dauern.
-          </p>
-        )}
+        <p>Kapitel wird geladen...</p>
       </div>
     );
   }
@@ -223,7 +110,7 @@ export default function ReaderPage() {
     );
   }
 
-  if (!chapter || chapter.imageUrls.length === 0) {
+  if (!imageUrls || imageUrls.length === 0) {
     return (
       <div className={styles.loading}>
         <p>Keine Bilder gefunden.</p>
@@ -245,8 +132,8 @@ export default function ReaderPage() {
     <Reader
       slug={slug}
       chapterNumber={chapterNum}
-      title={chapter.title}
-      imageUrls={chapter.imageUrls}
+      title={chapterTitle}
+      imageUrls={imageUrls}
       prevChapter={prevChapter}
       nextChapter={nextChapter}
       allChapterNums={allChapterNums}
