@@ -2,7 +2,7 @@ const CACHE_NAME = "manga-reader-v2";
 const IMG_CACHE = "manga-images-v2";
 const API_CACHE = "manga-api-v2";
 const FONT_CACHE = "manga-fonts-v1";
-const MAX_IMG_CACHE = 500;
+const MAX_IMG_CACHE = 2000;
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -57,22 +57,27 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Image proxy: cache-first with LRU eviction
-  if (url.pathname === "/api/img") {
-    event.respondWith(
-      caches.open(IMG_CACHE).then((cache) =>
-        cache.match(event.request).then((cached) => {
-          if (cached) return cached;
-          return fetch(event.request).then((response) => {
-            if (response.ok) {
-              cache.put(event.request, response.clone());
-              evictOldImages();
-            }
-            return response;
-          });
-        })
-      )
-    );
-    return;
+  if (url.pathname === "/api/proxy" && url.searchParams.get("url")) {
+    const targetUrl = url.searchParams.get("url") || "";
+    // Only cache image responses, not HTML pages
+    const isImageRequest = targetUrl.includes("manhwatop.com") || targetUrl.match(/\.(jpg|jpeg|png|webp|gif)(\?|$)/i);
+    if (isImageRequest) {
+      event.respondWith(
+        caches.open(IMG_CACHE).then((cache) =>
+          cache.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return fetch(event.request).then((response) => {
+              if (response.ok) {
+                cache.put(event.request, response.clone());
+                evictOldImages();
+              }
+              return response;
+            });
+          })
+        )
+      );
+      return;
+    }
   }
 
   // API routes: network-first with cache fallback
