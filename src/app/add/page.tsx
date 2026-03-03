@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import Link from "next/link";
+import { discoverSeries } from "@/lib/scraper";
+import { saveSeries } from "@/lib/manga-store";
 
 export default function AddSeriesPage() {
   const [url, setUrl] = useState("");
@@ -19,24 +21,25 @@ export default function AddSeriesPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/series", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+      const discovered = await discoverSeries(url.trim());
+
+      const slug = discovered.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      saveSeries({
+        slug,
+        title: discovered.title,
+        coverUrl: discovered.coverUrl,
+        sourceUrl: discovered.sourceUrl,
+        totalChapters: 0,
+        addedAt: Date.now(),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Fehler beim Hinzufuegen");
-        return;
-      }
-
-      if (data.series?.slug) {
-        router.push(`/series/${data.series.slug}`);
-      }
+      router.push(`/series/${slug}`);
     } catch {
-      setError("Netzwerkfehler. Bitte erneut versuchen.");
+      setError("Fehler beim Laden der Serie. Ist die URL korrekt?");
     } finally {
       setLoading(false);
     }
@@ -106,7 +109,7 @@ export default function AddSeriesPage() {
 
         {loading && (
           <p className={styles.hint}>
-            Die Serie wird gecrawlt. Dies kann 10-20 Sekunden dauern...
+            Serie wird geladen...
           </p>
         )}
       </form>
