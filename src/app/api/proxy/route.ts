@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c4.manhwatop.com", "media.manhwazone.to"];
+const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
 
 const FETCH_TIMEOUT = 15000;
 
@@ -25,15 +25,15 @@ export async function GET(req: NextRequest) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
-    const isImageCdn = parsed.hostname.includes("manhwatop.com");
+    const isImage = /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(parsed.pathname);
     const headers: Record<string, string> = {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept": isImage
+        ? "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8"
+        : "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.5",
+      "Referer": "https://manhwazone.to/",
     };
-    if (!isImageCdn) {
-      headers["Referer"] = "https://manhwazone.to/";
-    }
 
     const resp = await fetch(url, { signal: controller.signal, headers });
     clearTimeout(timeout);

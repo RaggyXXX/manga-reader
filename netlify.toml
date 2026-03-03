@@ -6,11 +6,6 @@
   package = "@netlify/plugin-nextjs"
 
 [[headers]]
-  for = "/api/proxy"
-  [headers.values]
-    Cache-Control = "public, max-age=86400, immutable"
-
-[[headers]]
   for = "/sw.js"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
