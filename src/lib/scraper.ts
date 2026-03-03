@@ -1,5 +1,3 @@
-const ALLORIGINS_GET = "https://api.allorigins.win/get?url=";
-const ALLORIGINS_RAW = "https://api.allorigins.win/raw?url=";
 const IMAGE_PROXY_BASE = "/api/proxy?url=";
 const REQUEST_DELAY = 500;
 
@@ -8,57 +6,16 @@ export function imageProxyUrl(url: string): string {
 }
 
 async function fetchHtml(url: string): Promise<Document> {
-  const errors: string[] = [];
-
-  // Strategy 1: allorigins /get (JSON wrapper — most reliable)
-  try {
-    const resp = await fetch(ALLORIGINS_GET + encodeURIComponent(url));
-    if (resp.ok) {
-      const json = await resp.json();
-      if (json.contents && json.contents.length > 200) {
-        return new DOMParser().parseFromString(json.contents, "text/html");
-      }
-      errors.push("allorigins/get: empty contents");
-    } else {
-      errors.push(`allorigins/get: ${resp.status}`);
-    }
-  } catch (e) {
-    errors.push(`allorigins/get: ${e instanceof Error ? e.message : e}`);
+  // All HTML fetching goes through our proxy (which uses allorigins server-side)
+  const resp = await fetch(IMAGE_PROXY_BASE + encodeURIComponent(url));
+  if (!resp.ok) {
+    throw new Error(`Proxy returned ${resp.status}`);
   }
-
-  // Strategy 2: allorigins /raw (direct HTML)
-  try {
-    const resp = await fetch(ALLORIGINS_RAW + encodeURIComponent(url));
-    if (resp.ok) {
-      const text = await resp.text();
-      if (text && text.length > 200) {
-        return new DOMParser().parseFromString(text, "text/html");
-      }
-      errors.push("allorigins/raw: empty response");
-    } else {
-      errors.push(`allorigins/raw: ${resp.status}`);
-    }
-  } catch (e) {
-    errors.push(`allorigins/raw: ${e instanceof Error ? e.message : e}`);
+  const text = await resp.text();
+  if (!text || text.length < 200) {
+    throw new Error("Proxy returned empty/short response");
   }
-
-  // Strategy 3: our own proxy (works when not blocked by Cloudflare)
-  try {
-    const resp = await fetch(IMAGE_PROXY_BASE + encodeURIComponent(url));
-    if (resp.ok) {
-      const text = await resp.text();
-      if (text && text.length > 200) {
-        return new DOMParser().parseFromString(text, "text/html");
-      }
-      errors.push("proxy: empty response");
-    } else {
-      errors.push(`proxy: ${resp.status}`);
-    }
-  } catch (e) {
-    errors.push(`proxy: ${e instanceof Error ? e.message : e}`);
-  }
-
-  throw new Error(`All proxies failed: ${errors.join("; ")}`);
+  return new DOMParser().parseFromString(text, "text/html");
 }
 
 function delay(ms: number): Promise<void> {

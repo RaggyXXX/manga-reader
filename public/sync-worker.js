@@ -1,8 +1,6 @@
 /* sync-worker.js – Web Worker for background chapter sync */
 /* DOMParser is NOT available in Workers — we use regex-based HTML parsing */
 
-const ALLORIGINS_GET = "https://api.allorigins.win/get?url=";
-const ALLORIGINS_RAW = "https://api.allorigins.win/raw?url=";
 const REQUEST_DELAY = 500;
 
 let cancelled = false;
@@ -14,58 +12,17 @@ function delay(ms) {
 }
 
 async function fetchHtmlText(url, origin) {
-  const errors = [];
-
-  // Strategy 1: allorigins /get (JSON wrapper)
-  try {
-    const resp = await fetch(ALLORIGINS_GET + encodeURIComponent(url));
-    if (resp.ok) {
-      const json = await resp.json();
-      if (json.contents && json.contents.length > 200) {
-        return json.contents;
-      }
-      errors.push("allorigins/get: empty contents");
-    } else {
-      errors.push("allorigins/get: " + resp.status);
-    }
-  } catch (e) {
-    errors.push("allorigins/get: " + (e.message || e));
+  // All HTML fetching goes through our proxy (which uses allorigins server-side)
+  const proxyBase = origin + "/api/proxy?url=";
+  const resp = await fetch(proxyBase + encodeURIComponent(url));
+  if (!resp.ok) {
+    throw new Error("Proxy returned " + resp.status);
   }
-
-  // Strategy 2: allorigins /raw
-  try {
-    const resp = await fetch(ALLORIGINS_RAW + encodeURIComponent(url));
-    if (resp.ok) {
-      const text = await resp.text();
-      if (text && text.length > 200) {
-        return text;
-      }
-      errors.push("allorigins/raw: empty response");
-    } else {
-      errors.push("allorigins/raw: " + resp.status);
-    }
-  } catch (e) {
-    errors.push("allorigins/raw: " + (e.message || e));
+  const text = await resp.text();
+  if (!text || text.length < 200) {
+    throw new Error("Proxy returned empty/short response");
   }
-
-  // Strategy 3: our own proxy
-  try {
-    const proxyBase = origin + "/api/proxy?url=";
-    const resp = await fetch(proxyBase + encodeURIComponent(url));
-    if (resp.ok) {
-      const text = await resp.text();
-      if (text && text.length > 200) {
-        return text;
-      }
-      errors.push("proxy: empty response");
-    } else {
-      errors.push("proxy: " + resp.status);
-    }
-  } catch (e) {
-    errors.push("proxy: " + (e.message || e));
-  }
-
-  throw new Error("All proxies failed: " + errors.join("; "));
+  return text;
 }
 
 function extractChapterNum(url) {
@@ -211,7 +168,8 @@ async function discoverAllChapters(firstChapterUrl, origin) {
 
       if (currentUrl) await delay(REQUEST_DELAY);
     } catch (e) {
-      break;
+      self.postMessage({ type: "error", error: "Discovery failed at " + currentUrl + ": " + (e.message || e) });
+      return 0;
     }
   }
 

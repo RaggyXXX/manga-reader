@@ -28,7 +28,7 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
   const [sortAsc, setSortAsc] = useState(false);
   const { phase, slug: syncSlug, startSync, stopSync } = useSyncContext();
 
-  const isSyncing = phase !== "idle" && syncSlug === seriesSlug;
+  const isSyncing = phase !== "idle" && phase !== "error" && syncSlug === seriesSlug;
 
   useEffect(() => {
     setReadChapters(new Set(getReadChapters(seriesSlug)));

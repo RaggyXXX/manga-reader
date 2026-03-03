@@ -17,7 +17,7 @@ import {
   type StoredChapter,
 } from "@/lib/manga-store";
 
-export type SyncPhase = "idle" | "discovering" | "scraping";
+export type SyncPhase = "idle" | "discovering" | "scraping" | "error";
 
 interface SyncState {
   phase: SyncPhase;
@@ -25,6 +25,7 @@ interface SyncState {
   discovered: number;
   completed: number;
   total: number;
+  error: string | null;
 }
 
 interface SyncContextValue extends SyncState {
@@ -40,6 +41,7 @@ const IDLE_STATE: SyncState = {
   discovered: 0,
   completed: 0,
   total: 0,
+  error: null,
 };
 
 export function useSyncContext(): SyncContextValue {
@@ -90,6 +92,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         discovered: allChapters.length,
         completed: alreadySynced,
         total: allChapters.length,
+        error: null,
       });
     } else {
       // All chapters already synced
@@ -153,10 +156,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           break;
         }
 
-        case "stopped":
-        case "error": {
+        case "stopped": {
           setState(IDLE_STATE);
           slugRef.current = null;
+          break;
+        }
+
+        case "error": {
+          console.error("Sync worker error:", msg.error);
+          setState({
+            ...IDLE_STATE,
+            phase: "error",
+            error: msg.error || "Sync fehlgeschlagen",
+          });
+          slugRef.current = null;
+          // Auto-clear error after 5s
+          setTimeout(() => {
+            setState((prev) => (prev.phase === "error" ? IDLE_STATE : prev));
+          }, 5000);
           break;
         }
       }
@@ -199,6 +216,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           discovered: 0,
           completed: 0,
           total: 0,
+          error: null,
         });
         worker.postMessage({
           type: "start",
@@ -216,6 +234,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           discovered: allChapters.length,
           completed: alreadySynced,
           total: allChapters.length,
+          error: null,
         });
         worker.postMessage({
           type: "start",
@@ -230,6 +249,19 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           totalKnown: allChapters.length,
           origin: window.location.origin,
         });
+      } else {
+        // All chapters already synced — brief feedback
+        setState({
+          phase: "scraping",
+          slug,
+          discovered: allChapters.length,
+          completed: allChapters.length,
+          total: allChapters.length,
+          error: null,
+        });
+        setTimeout(() => {
+          setState((prev) => (prev.slug === slug && prev.completed === prev.total ? IDLE_STATE : prev));
+        }, 1500);
       }
     },
     [state.phase, getWorker]
