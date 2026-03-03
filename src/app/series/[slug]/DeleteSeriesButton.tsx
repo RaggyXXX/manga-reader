@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { deleteSeries } from "@/lib/manga-store";
+import { clearSeriesProgress } from "@/lib/reading-progress";
 import styles from "./page.module.css";
 
 interface Props {
@@ -16,16 +18,9 @@ export function DeleteSeriesButton({ seriesSlug, seriesTitle }: Props) {
 
   const handleDelete = async () => {
     setDeleting(true);
-    try {
-      const res = await fetch(`/api/series/${seriesSlug}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        router.push("/");
-      }
-    } catch {
-      setDeleting(false);
-    }
+    deleteSeries(seriesSlug);
+    clearSeriesProgress(seriesSlug);
+    router.push("/");
   };
 
   return (
