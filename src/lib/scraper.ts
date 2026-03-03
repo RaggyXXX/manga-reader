@@ -4,7 +4,7 @@ const IMAGE_PROXY_BASE = "/api/proxy?url=";
 const REQUEST_DELAY = 500;
 
 export function imageProxyUrl(url: string): string {
-  return IMAGE_PROXY_BASE + encodeURIComponent(url);
+  return IMAGE_PROXY_BASE + encodeURIComponent(url) + "&v=2";
 }
 
 async function fetchHtml(url: string): Promise<Document> {
