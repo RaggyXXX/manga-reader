@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { ImageFitMode } from "@/lib/types";
+import { imageProxyUrl } from "@/lib/scraper";
 import styles from "./RtlReader.module.css";
 
 interface ModeProps {
@@ -153,7 +154,6 @@ export default function RtlReader({
     [goPrev]
   );
 
-  const proxyUrl = (url: string) => `/api/proxy?url=${encodeURIComponent(url)}`;
   const fitClass = getFitClass(imageFitMode);
 
   return (
@@ -190,7 +190,7 @@ export default function RtlReader({
         ) : (
           <img
             key={currentPage}
-            src={proxyUrl(imageUrls[currentPage])}
+            src={imageProxyUrl(imageUrls[currentPage])}
             alt={`Seite ${currentPage + 1}`}
             className={`${styles.pageImage} ${fitClass} ${
               fadeState === "entering" ? styles.entering : styles.visible

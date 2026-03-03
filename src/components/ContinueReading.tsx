@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getProgress, type SeriesProgress } from "@/lib/reading-progress";
+import { imageProxyUrl } from "@/lib/scraper";
 import styles from "./ContinueReading.module.css";
 
 interface SeriesInfo {
@@ -80,7 +81,7 @@ export function ContinueReading({ series }: ContinueReadingProps) {
               : 0;
 
           const coverSrc = item.coverUrl
-            ? `/api/proxy?url=${encodeURIComponent(item.coverUrl)}`
+            ? imageProxyUrl(item.coverUrl)
             : undefined;
 
           return (

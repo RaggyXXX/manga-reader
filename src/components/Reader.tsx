@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import styles from "./Reader.module.css";
 import { markChapterRead, saveScrollPosition, getScrollPosition } from "@/lib/reading-progress";
+import { imageProxyUrl } from "@/lib/scraper";
 
 interface Props {
   slug: string;
@@ -162,7 +163,7 @@ export function Reader({
             key={i}
             ref={(el) => { imageRefs.current[i] = el; }}
             data-index={i}
-            src={`/api/proxy?url=${encodeURIComponent(url)}`}
+            src={imageProxyUrl(url)}
             alt={`Seite ${i + 1}`}
             className={styles.image}
             loading={i < 3 ? "eager" : "lazy"}

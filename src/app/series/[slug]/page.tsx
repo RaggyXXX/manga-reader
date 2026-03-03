@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getSeries, getChapters, type StoredSeries, type StoredChapter } from "@/lib/manga-store";
+import { imageProxyUrl } from "@/lib/scraper";
 import { ChapterList } from "@/components/ChapterList";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
 import { useSyncContext } from "@/contexts/SyncContext";
@@ -77,7 +78,7 @@ export default function SeriesPage() {
       <div className={styles.infoCard}>
         {series.coverUrl ? (
           <img
-            src={`/api/proxy?url=${encodeURIComponent(series.coverUrl)}`}
+            src={imageProxyUrl(series.coverUrl)}
             alt={series.title}
             className={styles.cover}
           />

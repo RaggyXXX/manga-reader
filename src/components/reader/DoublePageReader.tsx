@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { ImageFitMode } from "@/lib/types";
+import { imageProxyUrl } from "@/lib/scraper";
 import styles from "./DoublePageReader.module.css";
 
 interface ModeProps {
@@ -179,7 +180,6 @@ export default function DoublePageReader({
     [goNext]
   );
 
-  const proxyUrl = (url: string) => `/api/proxy?url=${encodeURIComponent(url)}`;
   const fitClass = getFitClass(imageFitMode);
 
   // Determine which pages to show
@@ -210,7 +210,7 @@ export default function DoublePageReader({
       return (
         <img
           key={pageIndex}
-          src={proxyUrl(imageUrls[pageIndex])}
+          src={imageProxyUrl(imageUrls[pageIndex])}
           alt={`Seite ${pageIndex + 1}`}
           className={`${styles.singleImage} ${fitClass}`}
           draggable={false}
@@ -229,7 +229,7 @@ export default function DoublePageReader({
       return (
         <img
           key={leftIdx}
-          src={proxyUrl(imageUrls[leftIdx])}
+          src={imageProxyUrl(imageUrls[leftIdx])}
           alt={`Seite ${leftIdx + 1}`}
           className={`${styles.singleImage} ${fitClass}`}
           draggable={false}
@@ -242,14 +242,14 @@ export default function DoublePageReader({
       <>
         <img
           key={`l-${leftIdx}`}
-          src={proxyUrl(imageUrls[leftIdx])}
+          src={imageProxyUrl(imageUrls[leftIdx])}
           alt={`Seite ${leftIdx + 1}`}
           className={styles.spreadImage}
           draggable={false}
         />
         <img
           key={`r-${rightIdx}`}
-          src={proxyUrl(imageUrls[rightIdx])}
+          src={imageProxyUrl(imageUrls[rightIdx])}
           alt={`Seite ${rightIdx + 1}`}
           className={styles.spreadImage}
           draggable={false}

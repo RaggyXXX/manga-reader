@@ -4,6 +4,7 @@ import Link from "next/link";
 import styles from "./SeriesCard.module.css";
 import { useEffect, useState } from "react";
 import { getReadChapters } from "@/lib/reading-progress";
+import { imageProxyUrl } from "@/lib/scraper";
 
 interface SeriesCardProps {
   slug: string;
@@ -32,7 +33,7 @@ export function SeriesCard({
         {/* Cover image or placeholder */}
         {coverUrl ? (
           <img
-            src={`/api/proxy?url=${encodeURIComponent(coverUrl)}`}
+            src={imageProxyUrl(coverUrl)}
             alt={title}
             className={styles.cover}
             loading="lazy"

@@ -1,8 +1,5 @@
 import { useEffect, useRef } from "react";
-
-function proxyUrl(originalUrl: string): string {
-  return `/api/proxy?url=${encodeURIComponent(originalUrl)}`;
-}
+import { imageProxyUrl } from "@/lib/scraper";
 
 export function usePreloader(
   imageUrls: string[],
@@ -22,7 +19,7 @@ export function usePreloader(
     for (let offset = -2; offset <= 2; offset++) {
       const idx = currentIndex + offset;
       if (idx >= 0 && idx < imageUrls.length) {
-        const url = proxyUrl(imageUrls[idx]);
+        const url = imageProxyUrl(imageUrls[idx]);
         if (!loadedUrls.current.has(url)) {
           toPreload.push(url);
           loadedUrls.current.add(url);
@@ -38,7 +35,7 @@ export function usePreloader(
     ) {
       const count = Math.min(5, nextChapterUrls.length);
       for (let i = 0; i < count; i++) {
-        const url = proxyUrl(nextChapterUrls[i]);
+        const url = imageProxyUrl(nextChapterUrls[i]);
         if (!loadedUrls.current.has(url)) {
           toPreload.push(url);
           loadedUrls.current.add(url);

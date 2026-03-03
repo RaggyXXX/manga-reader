@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import styles from "./VerticalReader.module.css";
 import type { ImageFitMode } from "@/lib/types";
+import { imageProxyUrl } from "@/lib/scraper";
 
 /* ── Fit-mode → CSS class map ────────────────────── */
 
@@ -136,7 +137,7 @@ export default function VerticalReader({
             key={`${url}-${i}`}
             ref={(el) => setImageRef(el, i)}
             data-index={i}
-            src={`/api/proxy?url=${encodeURIComponent(url)}`}
+            src={imageProxyUrl(url)}
             alt={`Seite ${i + 1}`}
             className={`${styles.image} ${fitClass}`}
             loading={i < 3 ? "eager" : "lazy"}
