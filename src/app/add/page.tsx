@@ -38,8 +38,9 @@ export default function AddSeriesPage() {
       });
 
       router.push(`/series/${slug}`);
-    } catch {
-      setError("Fehler beim Laden der Serie. Ist die URL korrekt?");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Fehler beim Laden der Serie: ${msg}`);
     } finally {
       setLoading(false);
     }

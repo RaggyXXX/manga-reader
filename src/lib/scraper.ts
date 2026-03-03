@@ -1,4 +1,7 @@
-const ALLORIGINS_BASE = "https://api.allorigins.win/raw?url=";
+const HTML_PROXIES = [
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `/api/proxy?url=${encodeURIComponent(url)}`,
+];
 const IMAGE_PROXY_BASE = "/api/proxy?url=";
 const REQUEST_DELAY = 1500;
 
@@ -7,11 +10,28 @@ export function imageProxyUrl(url: string): string {
 }
 
 async function fetchHtml(url: string): Promise<Document> {
-  const resp = await fetch(ALLORIGINS_BASE + encodeURIComponent(url));
-  if (!resp.ok) throw new Error(`Failed to fetch: ${resp.status}`);
-  const text = await resp.text();
-  const parser = new DOMParser();
-  return parser.parseFromString(text, "text/html");
+  let lastError: Error | null = null;
+
+  for (const makeUrl of HTML_PROXIES) {
+    try {
+      const resp = await fetch(makeUrl(url));
+      if (!resp.ok) {
+        lastError = new Error(`Failed to fetch: ${resp.status}`);
+        continue;
+      }
+      const text = await resp.text();
+      if (!text || text.length < 200) {
+        lastError = new Error("Empty or too-short response");
+        continue;
+      }
+      const parser = new DOMParser();
+      return parser.parseFromString(text, "text/html");
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+    }
+  }
+
+  throw lastError || new Error("All proxies failed");
 }
 
 function delay(ms: number): Promise<void> {
