@@ -49,6 +49,9 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
     setReadChapters(new Set(getReadChapters(seriesSlug)));
   }, [seriesSlug]);
 
+  const [localChapters, setLocalChapters] = useState<StoredChapter[]>([]);
+  const [syncPhase, setSyncPhase] = useState<"idle" | "discovering" | "scraping">("idle");
+
   /* ── Sync handler ── */
   const handleSync = useCallback(async () => {
     setSyncing(true);
@@ -59,37 +62,45 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
       const series = getSeries(seriesSlug);
       if (!series) return;
 
-      let localChapters = getLocalChapters(seriesSlug);
+      let stored = getLocalChapters(seriesSlug);
 
       // Phase 1: Discover chapters if we don't have any
-      if (localChapters.length === 0 && series.sourceUrl) {
+      if (stored.length === 0 && series.sourceUrl) {
+        setSyncPhase("discovering");
         const discovered = await discoverSeries(series.sourceUrl);
 
         if (discovered.firstChapterUrl) {
           setSyncProgress({ completed: 0, total: 0 });
 
-          const discoveredChapters = await discoverAllChapters(
+          await discoverAllChapters(
             discovered.firstChapterUrl,
-            (count) => setSyncProgress({ completed: 0, total: count }),
+            (count, chapter) => {
+              // Save each chapter as it's discovered
+              if (chapter) {
+                const stored: StoredChapter = {
+                  number: chapter.number,
+                  title: chapter.title,
+                  url: chapter.url,
+                  imageUrls: [],
+                  syncedAt: null,
+                };
+                saveChapter(seriesSlug, stored);
+                updateSeriesTotalChapters(seriesSlug, count);
+                setLocalChapters(getLocalChapters(seriesSlug));
+              }
+              setSyncProgress({ completed: count, total: 0 });
+            },
             abort.signal
           );
 
-          const toSave: StoredChapter[] = discoveredChapters.map((ch) => ({
-            number: ch.number,
-            title: ch.title,
-            url: ch.url,
-            imageUrls: [],
-            syncedAt: null,
-          }));
-          saveChapters(seriesSlug, toSave);
-          updateSeriesTotalChapters(seriesSlug, toSave.length);
-          localChapters = toSave;
+          stored = getLocalChapters(seriesSlug);
         }
       }
 
       // Phase 2: Scrape images for unsynced chapters
-      const unsynced = localChapters.filter((ch) => ch.imageUrls.length === 0);
-      const total = localChapters.length;
+      setSyncPhase("scraping");
+      const unsynced = stored.filter((ch) => ch.imageUrls.length === 0);
+      const total = stored.length;
       const alreadySynced = total - unsynced.length;
 
       setSyncProgress({ completed: alreadySynced, total });
@@ -101,6 +112,7 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
         try {
           const imageUrls = await scrapeChapterImages(ch.url);
           saveChapter(seriesSlug, { ...ch, imageUrls, syncedAt: Date.now() });
+          setLocalChapters(getLocalChapters(seriesSlug));
           setSyncProgress({ completed: alreadySynced + i + 1, total });
         } catch {
           // Skip failed chapter, continue with next
@@ -118,6 +130,7 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
       setSyncing(false);
       setSyncProgress(null);
       setSyncAbort(null);
+      setSyncPhase("idle");
     }
   }, [seriesSlug]);
 
@@ -126,12 +139,25 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
     syncAbort?.abort();
   }, [syncAbort]);
 
+  /* ── Merge prop chapters with live local state ── */
+  const displayChapters = useMemo(() => {
+    if (localChapters.length > 0) {
+      return localChapters.map((ch) => ({
+        number: ch.number,
+        title: ch.title,
+        status: ch.imageUrls.length > 0 ? "crawled" : "pending",
+        pageCount: ch.imageUrls.length,
+      }));
+    }
+    return chapters;
+  }, [chapters, localChapters]);
+
   /* ── Mark all / clear all ── */
   const handleMarkAllRead = useCallback(() => {
-    const allNumbers = chapters.map((ch) => ch.number);
+    const allNumbers = displayChapters.map((ch) => ch.number);
     markAllChaptersRead(seriesSlug, allNumbers);
     setReadChapters(new Set(allNumbers));
-  }, [chapters, seriesSlug]);
+  }, [displayChapters, seriesSlug]);
 
   const handleClearProgress = useCallback(() => {
     clearSeriesProgress(seriesSlug);
@@ -141,10 +167,10 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
   /* ── Filtered + sorted chapters ── */
   const filteredChapters = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let result = chapters;
+    let result = displayChapters;
 
     if (q) {
-      result = chapters.filter(
+      result = displayChapters.filter(
         (ch) =>
           String(ch.number).includes(q) ||
           ch.title.toLowerCase().includes(q)
@@ -152,9 +178,9 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
     }
 
     return sortAsc ? result : [...result].reverse();
-  }, [chapters, search, sortAsc]);
+  }, [displayChapters, search, sortAsc]);
 
-  const pendingCount = chapters.filter(
+  const pendingCount = displayChapters.filter(
     (ch) => ch.status === "pending"
   ).length;
 
@@ -247,7 +273,7 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
       <div className={styles.syncBar}>
         <span className={styles.syncInfo}>
           <span className={styles.syncDot} />
-          {pendingCount > 0 ? `${pendingCount} Kapitel noch nicht geladen` : `${chapters.length} Kapitel`}
+          {pendingCount > 0 ? `${pendingCount} Kapitel noch nicht geladen` : `${displayChapters.length} Kapitel`}
         </span>
         <button
           className={styles.syncBtn}
@@ -265,14 +291,18 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
             className={styles.progressFill}
             style={{
               width: `${
-                syncProgress.total > 0
+                syncPhase === "discovering"
+                  ? 100 // Indeterminate for discovery
+                  : syncProgress.total > 0
                   ? (syncProgress.completed / syncProgress.total) * 100
                   : 0
               }%`,
             }}
           />
           <span className={styles.progressText}>
-            {syncProgress.completed} / {syncProgress.total}
+            {syncPhase === "discovering"
+              ? `Kapitel entdecken... ${syncProgress.completed} gefunden`
+              : `${syncProgress.completed} / ${syncProgress.total}`}
           </span>
         </div>
       )}

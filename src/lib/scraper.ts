@@ -125,7 +125,7 @@ export interface DiscoveredChapter {
 
 export async function discoverAllChapters(
   firstChapterUrl: string,
-  onProgress?: (discovered: number) => void,
+  onProgress?: (discovered: number, chapter?: DiscoveredChapter) => void,
   signal?: AbortSignal
 ): Promise<DiscoveredChapter[]> {
   const chapters: DiscoveredChapter[] = [];
@@ -143,8 +143,9 @@ export async function discoverAllChapters(
       const titleEl = doc.querySelector("h1") || doc.querySelector(".chapter-title");
       const title = titleEl?.textContent?.trim() || `Chapter ${num}`;
 
-      chapters.push({ number: num, title, url: currentUrl });
-      onProgress?.(chapters.length);
+      const chapter = { number: num, title, url: currentUrl };
+      chapters.push(chapter);
+      onProgress?.(chapters.length, chapter);
 
       const nextLink = doc.querySelector('link[rel="next"]')?.getAttribute("href")
         || doc.querySelector('a[rel="next"]')?.getAttribute("href")
