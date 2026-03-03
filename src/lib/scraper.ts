@@ -1,12 +1,13 @@
-const PROXY_BASE = "/api/proxy?url=";
+const ALLORIGINS_BASE = "https://api.allorigins.win/raw?url=";
+const IMAGE_PROXY_BASE = "/api/proxy?url=";
 const REQUEST_DELAY = 1500;
 
-function proxyUrl(url: string): string {
-  return PROXY_BASE + encodeURIComponent(url);
+export function imageProxyUrl(url: string): string {
+  return IMAGE_PROXY_BASE + encodeURIComponent(url);
 }
 
 async function fetchHtml(url: string): Promise<Document> {
-  const resp = await fetch(proxyUrl(url));
+  const resp = await fetch(ALLORIGINS_BASE + encodeURIComponent(url));
   if (!resp.ok) throw new Error(`Failed to fetch: ${resp.status}`);
   const text = await resp.text();
   const parser = new DOMParser();
