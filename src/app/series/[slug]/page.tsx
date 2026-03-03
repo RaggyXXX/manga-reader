@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getSeries, getChapters, type StoredSeries, type StoredChapter } from "@/lib/manga-store";
 import { ChapterList } from "@/components/ChapterList";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
+import { useSyncContext } from "@/contexts/SyncContext";
 import styles from "./page.module.css";
 import Link from "next/link";
 
@@ -12,12 +13,15 @@ export default function SeriesPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
+  const { phase, slug: syncSlug } = useSyncContext();
 
   const [series, setSeries] = useState<StoredSeries | null>(null);
   const [chapters, setChapters] = useState<StoredChapter[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
+  const isSyncing = phase !== "idle" && syncSlug === slug;
+
+  const refreshData = useCallback(() => {
     const s = getSeries(slug);
     if (!s) {
       router.push("/");
@@ -27,6 +31,26 @@ export default function SeriesPage() {
     setChapters(getChapters(slug));
     setLoaded(true);
   }, [slug, router]);
+
+  // Initial load
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
+
+  // Poll localStorage every 2s while syncing this series
+  useEffect(() => {
+    if (!isSyncing) return;
+    const id = setInterval(refreshData, 2000);
+    return () => clearInterval(id);
+  }, [isSyncing, refreshData]);
+
+  // Final refresh when sync ends
+  const prevSyncing = usePrevious(isSyncing);
+  useEffect(() => {
+    if (prevSyncing && !isSyncing) {
+      refreshData();
+    }
+  }, [isSyncing, prevSyncing, refreshData]);
 
   if (!loaded || !series) return null;
 
@@ -84,4 +108,13 @@ export default function SeriesPage() {
       />
     </div>
   );
+}
+
+// Small hook to track previous value
+function usePrevious<T>(value: T): T | undefined {
+  const [prev, setPrev] = useState<{ current: T | undefined }>({ current: undefined });
+  useEffect(() => {
+    setPrev({ current: value });
+  }, [value]);
+  return prev.current;
 }

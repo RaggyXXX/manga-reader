@@ -1,0 +1,84 @@
+.bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  height: 28px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  opacity: 0.3;
+  transition: width 0.5s ease;
+}
+
+.fill.shimmer {
+  width: 100% !important;
+  animation: shimmerMove 1.5s linear infinite;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    var(--accent-hover) 40%,
+    var(--accent) 80%
+  );
+  background-size: 200% 100%;
+  opacity: 0.25;
+}
+
+.text {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+}
+
+.stopBtn {
+  position: relative;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  background: none;
+  border: 1.5px solid var(--text-secondary);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.stopBtn:hover {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.stopIcon {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+@keyframes shimmerMove {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

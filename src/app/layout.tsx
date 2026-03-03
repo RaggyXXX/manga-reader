@@ -3,6 +3,8 @@ import { Nunito, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { ToastProvider } from "@/components/Toast";
+import { SyncProvider } from "@/contexts/SyncContext";
+import { SyncProgressBar } from "@/components/SyncProgressBar";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -44,9 +46,12 @@ export default function RootLayout({
   return (
     <html lang="de" className={`${nunito.variable} ${nunitoSans.variable}`}>
       <body style={{ fontFamily: "var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <SyncProvider>
+          <SyncProgressBar />
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </SyncProvider>
         <ServiceWorkerRegistrar />
       </body>
     </html>

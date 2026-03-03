@@ -8,19 +8,7 @@ import {
   markAllChaptersRead,
   clearSeriesProgress,
 } from "@/lib/reading-progress";
-import {
-  discoverSeries,
-  discoverAllChapters,
-  scrapeChapterImages,
-} from "@/lib/scraper";
-import {
-  getSeries,
-  getChapters as getLocalChapters,
-  saveChapters,
-  saveChapter,
-  updateSeriesTotalChapters,
-  type StoredChapter,
-} from "@/lib/manga-store";
+import { useSyncContext } from "@/contexts/SyncContext";
 
 interface ChapterItem {
   number: number;
@@ -36,128 +24,31 @@ interface Props {
 
 export function ChapterList({ chapters, seriesSlug }: Props) {
   const [readChapters, setReadChapters] = useState<Set<number>>(new Set());
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<{
-    completed: number;
-    total: number;
-  } | null>(null);
   const [search, setSearch] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
-  const [syncAbort, setSyncAbort] = useState<AbortController | null>(null);
+  const { phase, slug: syncSlug, startSync, stopSync } = useSyncContext();
+
+  const isSyncing = phase !== "idle" && syncSlug === seriesSlug;
 
   useEffect(() => {
     setReadChapters(new Set(getReadChapters(seriesSlug)));
   }, [seriesSlug]);
 
-  const [localChapters, setLocalChapters] = useState<StoredChapter[]>([]);
-  const [syncPhase, setSyncPhase] = useState<"idle" | "discovering" | "scraping">("idle");
-
   /* ── Sync handler ── */
-  const handleSync = useCallback(async () => {
-    setSyncing(true);
-    const abort = new AbortController();
-    setSyncAbort(abort);
+  const handleSync = useCallback(() => {
+    startSync(seriesSlug);
+  }, [seriesSlug, startSync]);
 
-    try {
-      const series = getSeries(seriesSlug);
-      if (!series) return;
-
-      let stored = getLocalChapters(seriesSlug);
-
-      // Phase 1: Discover chapters if we don't have any
-      if (stored.length === 0 && series.sourceUrl) {
-        setSyncPhase("discovering");
-        const discovered = await discoverSeries(series.sourceUrl);
-
-        if (discovered.firstChapterUrl) {
-          setSyncProgress({ completed: 0, total: 0 });
-
-          await discoverAllChapters(
-            discovered.firstChapterUrl,
-            (count, chapter) => {
-              // Save each chapter as it's discovered
-              if (chapter) {
-                const stored: StoredChapter = {
-                  number: chapter.number,
-                  title: chapter.title,
-                  url: chapter.url,
-                  imageUrls: [],
-                  syncedAt: null,
-                };
-                saveChapter(seriesSlug, stored);
-                updateSeriesTotalChapters(seriesSlug, count);
-                setLocalChapters(getLocalChapters(seriesSlug));
-              }
-              setSyncProgress({ completed: count, total: 0 });
-            },
-            abort.signal
-          );
-
-          stored = getLocalChapters(seriesSlug);
-        }
-      }
-
-      // Phase 2: Scrape images for unsynced chapters
-      setSyncPhase("scraping");
-      const unsynced = stored.filter((ch) => ch.imageUrls.length === 0);
-      const total = stored.length;
-      const alreadySynced = total - unsynced.length;
-
-      setSyncProgress({ completed: alreadySynced, total });
-
-      for (let i = 0; i < unsynced.length; i++) {
-        if (abort.signal.aborted) break;
-
-        const ch = unsynced[i];
-        try {
-          const imageUrls = await scrapeChapterImages(ch.url);
-          saveChapter(seriesSlug, { ...ch, imageUrls, syncedAt: Date.now() });
-          setLocalChapters(getLocalChapters(seriesSlug));
-          setSyncProgress({ completed: alreadySynced + i + 1, total });
-        } catch {
-          // Skip failed chapter, continue with next
-        }
-
-        if (i < unsynced.length - 1 && !abort.signal.aborted) {
-          await new Promise((r) => setTimeout(r, 1500));
-        }
-      }
-
-      window.location.reload();
-    } catch {
-      // Aborted or failed
-    } finally {
-      setSyncing(false);
-      setSyncProgress(null);
-      setSyncAbort(null);
-      setSyncPhase("idle");
-    }
-  }, [seriesSlug]);
-
-  /* ── Stop handler ── */
   const handleStopSync = useCallback(() => {
-    syncAbort?.abort();
-  }, [syncAbort]);
-
-  /* ── Merge prop chapters with live local state ── */
-  const displayChapters = useMemo(() => {
-    if (localChapters.length > 0) {
-      return localChapters.map((ch) => ({
-        number: ch.number,
-        title: ch.title,
-        status: ch.imageUrls.length > 0 ? "crawled" : "pending",
-        pageCount: ch.imageUrls.length,
-      }));
-    }
-    return chapters;
-  }, [chapters, localChapters]);
+    stopSync();
+  }, [stopSync]);
 
   /* ── Mark all / clear all ── */
   const handleMarkAllRead = useCallback(() => {
-    const allNumbers = displayChapters.map((ch) => ch.number);
+    const allNumbers = chapters.map((ch) => ch.number);
     markAllChaptersRead(seriesSlug, allNumbers);
     setReadChapters(new Set(allNumbers));
-  }, [displayChapters, seriesSlug]);
+  }, [chapters, seriesSlug]);
 
   const handleClearProgress = useCallback(() => {
     clearSeriesProgress(seriesSlug);
@@ -167,10 +58,10 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
   /* ── Filtered + sorted chapters ── */
   const filteredChapters = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let result = displayChapters;
+    let result = chapters;
 
     if (q) {
-      result = displayChapters.filter(
+      result = chapters.filter(
         (ch) =>
           String(ch.number).includes(q) ||
           ch.title.toLowerCase().includes(q)
@@ -178,9 +69,9 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
     }
 
     return sortAsc ? result : [...result].reverse();
-  }, [displayChapters, search, sortAsc]);
+  }, [chapters, search, sortAsc]);
 
-  const pendingCount = displayChapters.filter(
+  const pendingCount = chapters.filter(
     (ch) => ch.status === "pending"
   ).length;
 
@@ -273,39 +164,16 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
       <div className={styles.syncBar}>
         <span className={styles.syncInfo}>
           <span className={styles.syncDot} />
-          {pendingCount > 0 ? `${pendingCount} Kapitel noch nicht geladen` : `${displayChapters.length} Kapitel`}
+          {pendingCount > 0 ? `${pendingCount} Kapitel noch nicht geladen` : `${chapters.length} Kapitel`}
         </span>
         <button
           className={styles.syncBtn}
-          onClick={syncing ? handleStopSync : handleSync}
+          onClick={isSyncing ? handleStopSync : handleSync}
           type="button"
         >
-          {syncing ? "Stop" : "Sync All"}
+          {isSyncing ? "Stop" : "Sync All"}
         </button>
       </div>
-
-      {/* Progress bar during sync */}
-      {syncing && syncProgress && (
-        <div className={styles.progressBar}>
-          <div
-            className={styles.progressFill}
-            style={{
-              width: `${
-                syncPhase === "discovering"
-                  ? 100 // Indeterminate for discovery
-                  : syncProgress.total > 0
-                  ? (syncProgress.completed / syncProgress.total) * 100
-                  : 0
-              }%`,
-            }}
-          />
-          <span className={styles.progressText}>
-            {syncPhase === "discovering"
-              ? `Kapitel entdecken... ${syncProgress.completed} gefunden`
-              : `${syncProgress.completed} / ${syncProgress.total}`}
-          </span>
-        </div>
-      )}
 
       {/* Chapter list */}
       {filteredChapters.length === 0 ? (

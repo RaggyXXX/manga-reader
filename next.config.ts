@@ -24,6 +24,13 @@ const nextConfig: NextConfig = {
           { key: "Content-Type", value: "application/javascript; charset=utf-8" },
         ],
       },
+      {
+        source: "/sync-worker.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
+      },
     ];
   },
   // Empty turbopack config to allow Turbopack (Next.js 16 default)
