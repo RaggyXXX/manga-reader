@@ -8,9 +8,21 @@ import {
   markAllChaptersRead,
   clearSeriesProgress,
 } from "@/lib/reading-progress";
+import {
+  discoverSeries,
+  discoverAllChapters,
+  scrapeChapterImages,
+} from "@/lib/scraper";
+import {
+  getSeries,
+  getChapters as getLocalChapters,
+  saveChapters,
+  saveChapter,
+  updateSeriesTotalChapters,
+  type StoredChapter,
+} from "@/lib/manga-store";
 
 interface ChapterItem {
-  id: string;
   number: number;
   title: string;
   status: string;
@@ -20,10 +32,9 @@ interface ChapterItem {
 interface Props {
   chapters: ChapterItem[];
   seriesSlug: string;
-  seriesId: string;
 }
 
-export function ChapterList({ chapters, seriesSlug, seriesId }: Props) {
+export function ChapterList({ chapters, seriesSlug }: Props) {
   const [readChapters, setReadChapters] = useState<Set<number>>(new Set());
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{
@@ -32,6 +43,7 @@ export function ChapterList({ chapters, seriesSlug, seriesId }: Props) {
   } | null>(null);
   const [search, setSearch] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
+  const [syncAbort, setSyncAbort] = useState<AbortController | null>(null);
 
   useEffect(() => {
     setReadChapters(new Set(getReadChapters(seriesSlug)));
@@ -40,49 +52,79 @@ export function ChapterList({ chapters, seriesSlug, seriesId }: Props) {
   /* ── Sync handler ── */
   const handleSync = useCallback(async () => {
     setSyncing(true);
-    try {
-      const res = await fetch("/api/crawl/chapters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seriesId }),
-      });
-      const data = await res.json();
+    const abort = new AbortController();
+    setSyncAbort(abort);
 
-      if (data.completed) {
-        setSyncing(false);
-        return;
+    try {
+      const series = getSeries(seriesSlug);
+      if (!series) return;
+
+      let localChapters = getLocalChapters(seriesSlug);
+
+      // Phase 1: Discover chapters if we don't have any
+      if (localChapters.length === 0 && series.sourceUrl) {
+        const discovered = await discoverSeries(series.sourceUrl);
+
+        if (discovered.firstChapterUrl) {
+          setSyncProgress({ completed: 0, total: 0 });
+
+          const discoveredChapters = await discoverAllChapters(
+            discovered.firstChapterUrl,
+            (count) => setSyncProgress({ completed: 0, total: count }),
+            abort.signal
+          );
+
+          const toSave: StoredChapter[] = discoveredChapters.map((ch) => ({
+            number: ch.number,
+            title: ch.title,
+            url: ch.url,
+            imageUrls: [],
+            syncedAt: null,
+          }));
+          saveChapters(seriesSlug, toSave);
+          updateSeriesTotalChapters(seriesSlug, toSave.length);
+          localChapters = toSave;
+        }
       }
 
-      const poll = setInterval(async () => {
+      // Phase 2: Scrape images for unsynced chapters
+      const unsynced = localChapters.filter((ch) => ch.imageUrls.length === 0);
+      const total = localChapters.length;
+      const alreadySynced = total - unsynced.length;
+
+      setSyncProgress({ completed: alreadySynced, total });
+
+      for (let i = 0; i < unsynced.length; i++) {
+        if (abort.signal.aborted) break;
+
+        const ch = unsynced[i];
         try {
-          const statusRes = await fetch(`/api/crawl/status/${seriesId}`);
-          const statusData = await statusRes.json();
-
-          if (statusData.job) {
-            setSyncProgress({
-              completed: statusData.series.crawledChapters,
-              total: statusData.series.totalChapters,
-            });
-
-            if (
-              statusData.job.status === "completed" ||
-              statusData.job.status === "failed"
-            ) {
-              clearInterval(poll);
-              setSyncing(false);
-              setSyncProgress(null);
-              window.location.reload();
-            }
-          }
+          const imageUrls = await scrapeChapterImages(ch.url);
+          saveChapter(seriesSlug, { ...ch, imageUrls, syncedAt: Date.now() });
+          setSyncProgress({ completed: alreadySynced + i + 1, total });
         } catch {
-          clearInterval(poll);
-          setSyncing(false);
+          // Skip failed chapter, continue with next
         }
-      }, 5000);
+
+        if (i < unsynced.length - 1 && !abort.signal.aborted) {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      }
+
+      window.location.reload();
     } catch {
+      // Aborted or failed
+    } finally {
       setSyncing(false);
+      setSyncProgress(null);
+      setSyncAbort(null);
     }
-  }, [seriesId]);
+  }, [seriesSlug]);
+
+  /* ── Stop handler ── */
+  const handleStopSync = useCallback(() => {
+    syncAbort?.abort();
+  }, [syncAbort]);
 
   /* ── Mark all / clear all ── */
   const handleMarkAllRead = useCallback(() => {
@@ -202,22 +244,19 @@ export function ChapterList({ chapters, seriesSlug, seriesId }: Props) {
       </div>
 
       {/* Sync bar */}
-      {pendingCount > 0 && (
-        <div className={styles.syncBar}>
-          <span className={styles.syncInfo}>
-            <span className={styles.syncDot} />
-            {pendingCount} Kapitel noch nicht gecrawlt
-          </span>
-          <button
-            className={styles.syncBtn}
-            onClick={handleSync}
-            disabled={syncing}
-            type="button"
-          >
-            {syncing ? "Syncing..." : "Sync All"}
-          </button>
-        </div>
-      )}
+      <div className={styles.syncBar}>
+        <span className={styles.syncInfo}>
+          <span className={styles.syncDot} />
+          {pendingCount > 0 ? `${pendingCount} Kapitel noch nicht geladen` : `${chapters.length} Kapitel`}
+        </span>
+        <button
+          className={styles.syncBtn}
+          onClick={syncing ? handleStopSync : handleSync}
+          type="button"
+        >
+          {syncing ? "Stop" : "Sync All"}
+        </button>
+      </div>
 
       {/* Progress bar during sync */}
       {syncing && syncProgress && (
@@ -252,7 +291,7 @@ export function ChapterList({ chapters, seriesSlug, seriesId }: Props) {
               ch.pageCount > 0 ? Math.max(1, Math.round(ch.pageCount * 0.5)) : 0;
 
             return (
-              <li key={ch.id} className={styles.item}>
+              <li key={ch.number} className={styles.item}>
                 <Link
                   href={`/read/${seriesSlug}/${ch.number}`}
                   className={`${styles.link} ${isRead ? styles.read : ""}`}
