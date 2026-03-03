@@ -1,43 +1,46 @@
-import { connectDB } from "@/lib/db";
-import Series from "@/lib/models/Series";
-import Chapter from "@/lib/models/Chapter";
-import { notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { getSeries, getChapters, type StoredSeries, type StoredChapter } from "@/lib/manga-store";
 import { ChapterList } from "@/components/ChapterList";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
 import styles from "./page.module.css";
 import Link from "next/link";
 
-export const dynamic = "force-dynamic";
+export default function SeriesPage() {
+  const params = useParams();
+  const router = useRouter();
+  const slug = params.slug as string;
 
-interface Props {
-  params: Promise<{ slug: string }>;
-}
+  const [series, setSeries] = useState<StoredSeries | null>(null);
+  const [chapters, setChapters] = useState<StoredChapter[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-export default async function SeriesPage({ params }: Props) {
-  const { slug } = await params;
-  await connectDB();
+  useEffect(() => {
+    const s = getSeries(slug);
+    if (!s) {
+      router.push("/");
+      return;
+    }
+    setSeries(s);
+    setChapters(getChapters(slug));
+    setLoaded(true);
+  }, [slug, router]);
 
-  const series = await Series.findOne({ slug }).lean();
-  if (!series) notFound();
+  if (!loaded || !series) return null;
 
-  const chapters = await Chapter.find({ seriesId: series._id })
-    .sort({ number: 1 })
-    .select("_id number title status pageCount")
-    .lean();
+  const syncedCount = chapters.filter((ch) => ch.imageUrls.length > 0).length;
 
   const chaptersPlain = chapters.map((ch) => ({
-    id: ch._id.toString(),
     number: ch.number,
     title: ch.title,
-    status: ch.status,
-    pageCount: ch.pageCount,
+    status: ch.imageUrls.length > 0 ? "crawled" : "pending",
+    pageCount: ch.imageUrls.length,
   }));
-
-  const crawledCount = chapters.filter((ch) => ch.status === "crawled").length;
 
   return (
     <div className={styles.page}>
-      {/* Glassmorphism sticky header */}
       <header className={styles.header}>
         <Link href="/" className={styles.backBtn} aria-label="Zurueck">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -47,11 +50,10 @@ export default async function SeriesPage({ params }: Props) {
         <h1 className={styles.headerTitle}>{series.title}</h1>
       </header>
 
-      {/* Series info card */}
       <div className={styles.infoCard}>
         {series.coverUrl ? (
           <img
-            src={`/api/img?url=${encodeURIComponent(series.coverUrl)}`}
+            src={`/api/proxy?url=${encodeURIComponent(series.coverUrl)}`}
             alt={series.title}
             className={styles.cover}
           />
@@ -61,41 +63,24 @@ export default async function SeriesPage({ params }: Props) {
 
         <div className={styles.details}>
           <h2 className={styles.seriesTitle}>{series.title}</h2>
-
           <div className={styles.badges}>
             <span className={styles.badge}>
-              {series.totalChapters} Kapitel
+              {series.totalChapters || chapters.length} Kapitel
             </span>
             <span className={`${styles.badge} ${styles.badgeCrawled}`}>
-              {crawledCount} bereit
+              {syncedCount} bereit
             </span>
-          </div>
-
-          <div className={styles.statusRow}>
-            {series.status === "complete" ? (
-              <span className={`${styles.statusBadge} ${styles.statusComplete}`}>
-                <span className={styles.sparkle}>&#10024;</span>
-                Komplett
-              </span>
-            ) : (
-              <span className={`${styles.statusBadge} ${styles.statusOngoing}`}>
-                Laufend
-              </span>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Delete button */}
       <div className={styles.dangerZone}>
         <DeleteSeriesButton seriesSlug={slug} seriesTitle={series.title} />
       </div>
 
-      {/* Chapter list */}
       <ChapterList
         chapters={chaptersPlain}
         seriesSlug={slug}
-        seriesId={series._id.toString()}
       />
     </div>
   );
