@@ -92,11 +92,6 @@ export default function LibraryPage() {
         </section>
       )}
 
-      <Link href="/add" className="fixed bottom-20 right-4 z-50 md:hidden" aria-label="Add series">
-        <Button size="icon" className="h-12 w-12 rounded-full shadow-lg">
-          <Plus className="h-5 w-5" />
-        </Button>
-      </Link>
     </div>
   );
 }

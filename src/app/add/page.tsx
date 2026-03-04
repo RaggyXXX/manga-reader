@@ -47,12 +47,12 @@ export default function AddSeriesPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex items-start gap-3">
+        <ContextBackChevron className="mt-0.5 shrink-0" />
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Add Series</h1>
           <p className="text-sm text-muted-foreground">Search across sources or add directly with a URL.</p>
         </div>
-        <ContextBackChevron />
       </header>
 
       <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>

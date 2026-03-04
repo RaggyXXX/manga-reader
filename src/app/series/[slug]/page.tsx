@@ -58,8 +58,8 @@ export default function SeriesPage() {
   return (
     <div key={refreshTick} className="space-y-4">
       <div className="flex items-center justify-between">
+        <ContextBackChevron className="shrink-0" />
         <DeleteSeriesButton seriesSlug={slug} seriesTitle={series.title} />
-        <ContextBackChevron />
       </div>
 
       <Card className="overflow-hidden">
