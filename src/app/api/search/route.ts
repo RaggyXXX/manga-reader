@@ -69,6 +69,8 @@ async function searchMangaKatana(q: string): Promise<SearchResult[]> {
   const url = `https://mangakatana.com/?search=${encodeURIComponent(q)}&search_by=book_name`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`MangaKatana ${resp.status}`);
+  // MangaKatana redirects to a random manga page when 0 results — detect and bail
+  if (resp.url.includes("/manga/")) return [];
   const html = await resp.text();
 
   const results: SearchResult[] = [];
