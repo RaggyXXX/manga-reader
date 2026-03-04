@@ -5,7 +5,9 @@ const REQUEST_DELAY = 500;
 const CF_PROXY_URL = process.env.NEXT_PUBLIC_CF_PROXY_URL || "";
 
 export function imageProxyUrl(url: string): string {
-  return IMAGE_PROXY_BASE + encodeURIComponent(url) + "&v=2";
+  // Load images directly in the browser — the browser's real TLS fingerprint
+  // passes Cloudflare, while server-side proxies get blocked with 403.
+  return url;
 }
 
 function validateHtmlText(text: string): void {
