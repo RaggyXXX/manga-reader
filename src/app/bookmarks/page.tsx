@@ -112,7 +112,7 @@ export default function BookmarksPage() {
 
       {/* Bookmark grid */}
       {flatBookmarks.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" data-tour="bookmarks-grid">
           {flatBookmarks.map((bookmark) => {
             const series = getSeries(bookmark.slug);
             const seriesTitle = series?.title || bookmark.slug.replace(/-/g, " ");

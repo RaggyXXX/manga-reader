@@ -206,7 +206,9 @@ export default function SeriesPage() {
                 </div>
               </div>
 
-              <StatusSelector value={status} onChange={handleStatusChange} />
+              <div data-tour="series-reading-status">
+                <StatusSelector value={status} onChange={handleStatusChange} />
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">

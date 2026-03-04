@@ -70,6 +70,7 @@ export function QuickContinue({ series }: QuickContinueProps) {
       onClick={() => router.push(`/read/${item.slug}/${item.chapter}`)}
       className="group relative flex h-20 w-full items-center overflow-hidden rounded-2xl border border-border/70 bg-card text-left shadow-sm transition-shadow hover:shadow-md"
       aria-label={`Continue reading ${item.title} - Chapter ${item.chapter}`}
+      data-tour="library-quick-continue"
     >
       {/* Cover image with fade mask */}
       {coverSrc && (

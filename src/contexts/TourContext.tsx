@@ -18,6 +18,8 @@ const DEMO_SLUG = "demo-tutorial-manga";
 const SERIES_KEY = "manga-series";
 const CHAPTERS_KEY = "manga-chapters";
 
+type TourMode = "short" | "long";
+
 interface TourContextValue {
   startTour: () => void;
   isTourActive: boolean;
@@ -76,12 +78,18 @@ interface TourPhase {
   steps: DriveStep[];
 }
 
-function buildTourPhases(): TourPhase[] {
-  // Check if user has real series (not counting demo)
+function buildTourPhases(mode: TourMode): TourPhase[] {
   const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
   const realSlugs = Object.keys(seriesMap).filter((s) => s !== DEMO_SLUG);
   const hasRealLibrary = realSlugs.length > 0;
 
+  if (mode === "short") {
+    return buildShortTourPhases(hasRealLibrary);
+  }
+  return buildLongTourPhases(hasRealLibrary);
+}
+
+function buildShortTourPhases(hasRealLibrary: boolean): TourPhase[] {
   const phases: TourPhase[] = [];
 
   // Phase 1: Library page
@@ -138,7 +146,7 @@ function buildTourPhases(): TourPhase[] {
     ],
   });
 
-  // Phase 3: Series detail (always uses demo manga)
+  // Phase 3: Series detail
   phases.push({
     path: `/series/${DEMO_SLUG}`,
     steps: [
@@ -185,12 +193,248 @@ function buildTourPhases(): TourPhase[] {
   return phases;
 }
 
+function buildLongTourPhases(hasRealLibrary: boolean): TourPhase[] {
+  const phases: TourPhase[] = [];
+
+  // Phase 1: Library page
+  const librarySteps: DriveStep[] = [
+    {
+      popover: {
+        title: "Welcome to Manga Blast!",
+        description: hasRealLibrary
+          ? "Let's explore everything Manga Blast has to offer. This is your library — all your added series live here."
+          : "Let's take the full tour! We've added an example manga so you can see all features in action.",
+      },
+    },
+    ...(hasRealLibrary
+      ? [
+          {
+            element: '[data-tour="library-quick-continue"]',
+            popover: {
+              title: "Quick Continue",
+              description: "Jump back in — continue exactly where you left off with one tap.",
+              side: "bottom" as const,
+              align: "start" as const,
+            },
+          },
+        ]
+      : []),
+    {
+      element: '[data-tour="library-sort"]',
+      popover: {
+        title: "Sort",
+        description: "Sort your library by last read, name, recently added, or chapter count.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: '[data-tour="library-filter-favorites"]',
+      popover: {
+        title: "Favorites Filter",
+        description: "Filter to only show your favorited series.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: '[data-tour="library-view-toggle"]',
+      popover: {
+        title: "Grid / List View",
+        description: "Switch between grid and list view for your library.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+  ];
+  phases.push({ path: "/", steps: librarySteps });
+
+  // Phase 2: Add page
+  phases.push({
+    path: "/add",
+    steps: [
+      {
+        element: '[data-tour="add-search-tab"]',
+        popover: {
+          title: "Search",
+          description: "Search across all supported sources — MangaDex, MangaKatana, VyManga, and Manhwazone.",
+          side: "bottom",
+          align: "start",
+        },
+      },
+      {
+        element: '[data-tour="add-url-tab"]',
+        popover: {
+          title: "Add by URL",
+          description: "Paste a direct link to add any manga from a supported source.",
+          side: "bottom",
+          align: "start",
+        },
+      },
+    ],
+  });
+
+  // Phase 3: Series detail
+  phases.push({
+    path: `/series/${DEMO_SLUG}`,
+    steps: [
+      {
+        element: '[data-tour="series-reading-status"]',
+        popover: {
+          title: "Reading Status",
+          description: "Track your progress — Reading, Plan to Read, Completed, On Hold, or Dropped.",
+          side: "bottom",
+          align: "start",
+        },
+      },
+      {
+        element: '[data-tour="series-sync"]',
+        popover: {
+          title: "Download & Update",
+          description:
+            'Tap "Download all" to save chapters for offline reading. When new chapters are available, the button changes to "Update".',
+          side: "top",
+          align: "center",
+        },
+      },
+      {
+        element: '[data-tour="series-share-fav"]',
+        popover: {
+          title: "Share & Favorite",
+          description: "Share this series with friends or mark it as a favorite for quick access.",
+          side: "bottom",
+          align: "end",
+        },
+      },
+      {
+        element: '[data-tour="series-chapter-list"]',
+        popover: {
+          title: "Chapter List",
+          description: "Browse, search, and sort chapters. Filter to show only unread chapters.",
+          side: "top",
+          align: "center",
+        },
+      },
+    ],
+  });
+
+  // Phase 4: Bookmarks
+  phases.push({
+    path: "/bookmarks",
+    steps: [
+      {
+        popover: {
+          title: "Bookmarks",
+          description: "Your saved pages appear here as thumbnails. Long-press any page while reading to bookmark it.",
+        },
+      },
+    ],
+  });
+
+  // Phase 5: Stats
+  phases.push({
+    path: "/stats",
+    steps: [
+      {
+        popover: {
+          title: "Reading Metrics",
+          description: "Track chapters read, pages viewed, and estimated reading time. Your stats will appear here as you read.",
+        },
+      },
+      {
+        element: '[data-tour="stats-offline-storage"]',
+        popover: {
+          title: "Offline Storage",
+          description: "Manage cached chapter data per series. Clear individual or all caches.",
+          side: "top",
+          align: "center",
+        },
+      },
+    ],
+  });
+
+  // Phase 6: Install guide
+  phases.push({
+    path: "/install",
+    steps: [
+      {
+        element: '[data-tour="install-page"]',
+        popover: {
+          title: "Install Manga Blast",
+          description: "Add Manga Blast to your home screen for the full experience — fullscreen reading, offline access, and native app feel.",
+          side: "bottom",
+          align: "center",
+        },
+      },
+    ],
+  });
+
+  return phases;
+}
+
+// --- Choice Dialog ---
+
+function TourChoiceDialog({ onChoice }: { onChoice: (mode: TourMode) => void }) {
+  // Block Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60"
+      style={{ touchAction: "none" }}
+    >
+      <div className="mx-4 w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
+        <h2 className="text-center text-xl font-bold text-foreground">
+          Welcome to Manga Blast!
+        </h2>
+        <p className="mt-2 text-center text-sm text-muted-foreground">
+          Choose how you&apos;d like to explore the app.
+        </p>
+
+        <div className="mt-6 space-y-3">
+          <button
+            type="button"
+            onClick={() => onChoice("short")}
+            className="w-full rounded-xl border border-border bg-background px-4 py-3.5 text-left transition-colors hover:bg-muted/50"
+          >
+            <p className="font-semibold text-foreground">Short Tour</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Quick overview of the essentials — ~2 min
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChoice("long")}
+            className="w-full rounded-xl border-2 border-primary bg-primary/5 px-4 py-3.5 text-left transition-colors hover:bg-primary/10"
+          >
+            <p className="font-semibold text-foreground">Long Tour</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Full walkthrough of all features — ~5 min
+            </p>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Provider ---
 
 export function TourProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [active, setActive] = useState(false);
+  const [showChoice, setShowChoice] = useState(false);
   const driverRef = useRef<Driver | null>(null);
   const phasesRef = useRef<TourPhase[]>([]);
   const phaseIndexRef = useRef(0);
@@ -260,9 +504,10 @@ export function TourProvider({ children }: { children: ReactNode }) {
         steps: phase.steps,
         nextBtnText: "Next",
         prevBtnText: "Back",
-        doneBtnText: isLastPhase ? "Done!" : "Next Page →",
+        doneBtnText: isLastPhase ? "Done!" : "Next Page \u2192",
         progressText: "",
-        allowClose: true,
+        allowClose: false,
+        disableButtons: ["close"],
         overlayColor: "rgba(0, 0, 0, 0.6)",
         stagePadding: 8,
         stageRadius: 12,
@@ -274,12 +519,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
           if (!d.hasNextStep()) {
             d.destroy();
             advanceToNextPhase(phaseIdx);
-          } else {
-            // User closed early
-            localStorage.setItem(TOUR_DONE_KEY, "true");
-            d.destroy();
-            cleanup();
           }
+          // No else branch — cannot close early
         },
       });
 
@@ -308,39 +549,52 @@ export function TourProvider({ children }: { children: ReactNode }) {
     const done = localStorage.getItem(TOUR_DONE_KEY);
     if (!done && pathname === "/") {
       const timer = setTimeout(() => {
-        startTourInternal();
+        setShowChoice(true);
       }, 1200);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startTourInternal = useCallback(() => {
-    // Inject demo manga so all steps are available
-    injectDemoManga();
-    demoInjectedRef.current = true;
+  const startTourWithMode = useCallback(
+    (mode: TourMode) => {
+      setShowChoice(false);
 
-    const phases = buildTourPhases();
-    phasesRef.current = phases;
-    phaseIndexRef.current = 0;
-    setActive(true);
+      // Inject demo manga so all steps are available
+      injectDemoManga();
+      demoInjectedRef.current = true;
 
-    if (pathname !== phases[0].path) {
-      awaitingNavRef.current = true;
-      router.push(phases[0].path);
-    } else {
-      runPhase(0);
-    }
-  }, [pathname, router, runPhase]);
+      const phases = buildTourPhases(mode);
+      phasesRef.current = phases;
+      phaseIndexRef.current = 0;
+      setActive(true);
+
+      if (pathname !== phases[0].path) {
+        awaitingNavRef.current = true;
+        router.push(phases[0].path);
+      } else {
+        runPhase(0);
+      }
+    },
+    [pathname, router, runPhase],
+  );
+
+  const handleChoice = useCallback(
+    (mode: TourMode) => {
+      startTourWithMode(mode);
+    },
+    [startTourWithMode],
+  );
 
   const startTour = useCallback(() => {
     localStorage.removeItem(TOUR_DONE_KEY);
-    startTourInternal();
-  }, [startTourInternal]);
+    setShowChoice(true);
+  }, []);
 
   return (
     <TourContext.Provider value={{ startTour, isTourActive: active }}>
       {children}
+      {showChoice && <TourChoiceDialog onChoice={handleChoice} />}
     </TourContext.Provider>
   );
 }

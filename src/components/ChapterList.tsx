@@ -64,7 +64,7 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
   const pendingCount = chapters.filter((ch) => ch.status === "pending").length;
 
   return (
-    <Card>
+    <Card data-tour="series-chapter-list">
       <CardContent className="space-y-4 p-4">
         <div className="space-y-3">
           <div className="flex gap-2">

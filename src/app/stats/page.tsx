@@ -69,7 +69,7 @@ export default function StatsPage() {
 
       {hasData ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3" data-tour="stats-metrics">
             <Metric icon={BookOpen} label="Chapters Read" value={String(stats.totalChaptersRead)} />
             <Metric icon={Images} label="Pages Viewed" value={String(stats.totalPagesViewed)} />
             <Metric icon={Clock3} label="Reading Time" value={formatReadingTime(stats.estimatedMinutes)} />
@@ -112,7 +112,7 @@ export default function StatsPage() {
         </Card>
       )}
 
-      <Card>
+      <Card data-tour="stats-offline-storage">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="h-4 w-4" />

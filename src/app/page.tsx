@@ -471,6 +471,7 @@ export default function LibraryPage() {
                 type="button"
                 onClick={() => { setShowSortDropdown((v) => !v); setShowSourceDropdown(false); setShowStatusDropdown(false); }}
                 className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+                data-tour="library-sort"
               >
                 <ArrowDownUp className="h-3.5 w-3.5" />
                 {SORT_LABELS[prefs.sortBy]}
@@ -579,6 +580,7 @@ export default function LibraryPage() {
                 prefs.filterFavoritesOnly ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-950/30 dark:border-red-800" : "border-border bg-background text-foreground"
               }`}
               title="Favorites only"
+              data-tour="library-filter-favorites"
             >
               <Heart className={`h-3.5 w-3.5 ${prefs.filterFavoritesOnly ? "fill-red-500" : ""}`} />
             </button>
@@ -635,6 +637,7 @@ export default function LibraryPage() {
                 onClick={() => updatePrefs({ viewMode: viewMode === "grid" ? "list" : "grid" })}
                 className="flex items-center justify-center rounded-lg border border-border bg-background p-1.5 text-foreground transition-colors hover:bg-muted/50"
                 title={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+                data-tour="library-view-toggle"
               >
                 {viewMode === "grid" ? <LayoutList className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
               </button>
