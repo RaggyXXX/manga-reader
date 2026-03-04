@@ -66,7 +66,7 @@ async function previewMangaDex(sourceId: string, lang = "en"): Promise<PreviewMe
 
   const resp = await fetch(
     `${MANGADEX_API}/manga/${sourceId}?includes[]=cover_art&includes[]=author&includes[]=artist`,
-    { headers: { "User-Agent": "MangaReaderPWA/1.0" } },
+    { headers: { "User-Agent": "MangaBlastPWA/1.0" } },
   );
   if (!resp.ok) throw new Error(`MangaDex ${resp.status}`);
   const { data: manga } = await resp.json();
@@ -148,7 +148,7 @@ async function previewMangaDex(sourceId: string, lang = "en"): Promise<PreviewMe
   try {
     const chResp = await fetch(
       `${MANGADEX_API}/manga/${sourceId}/feed?translatedLanguage[]=${encodeURIComponent(lang)}&limit=1&offset=0`,
-      { headers: { "User-Agent": "MangaReaderPWA/1.0" } },
+      { headers: { "User-Agent": "MangaBlastPWA/1.0" } },
     );
     if (chResp.ok) {
       const chData = await chResp.json();
@@ -160,7 +160,7 @@ async function previewMangaDex(sourceId: string, lang = "en"): Promise<PreviewMe
   try {
     const statsResp = await fetch(
       `${MANGADEX_API}/statistics/manga/${sourceId}`,
-      { headers: { "User-Agent": "MangaReaderPWA/1.0" } },
+      { headers: { "User-Agent": "MangaBlastPWA/1.0" } },
     );
     if (statsResp.ok) {
       const statsData = await statsResp.json();

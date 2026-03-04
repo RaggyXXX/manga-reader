@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { ArrowDownUp, Search } from "lucide-react";
+import { ArrowDownUp, Eye, EyeOff, Search } from "lucide-react";
 import {
   clearSeriesProgress,
   getReadChapters,
@@ -32,6 +32,7 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
   );
   const [search, setSearch] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const { phase, slug: syncSlug, startSync, stopSync } = useSyncContext();
   const isSyncing = phase !== "idle" && phase !== "error" && syncSlug === seriesSlug;
 
@@ -59,13 +60,17 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
     let result = chapters;
 
     if (q) {
-      result = chapters.filter(
+      result = result.filter(
         (ch) => String(ch.number).includes(q) || ch.title.toLowerCase().includes(q),
       );
     }
 
+    if (unreadOnly) {
+      result = result.filter((ch) => !readChapters.has(ch.number));
+    }
+
     return sortAsc ? result : [...result].reverse();
-  }, [chapters, search, sortAsc]);
+  }, [chapters, search, sortAsc, unreadOnly, readChapters]);
 
   const pendingCount = chapters.filter((ch) => ch.status === "pending").length;
 
@@ -84,6 +89,14 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
                 className="pl-9"
               />
             </div>
+            <Button
+              variant={unreadOnly ? "default" : "outline"}
+              size="icon"
+              onClick={() => setUnreadOnly((v) => !v)}
+              title={unreadOnly ? "Show all" : "Unread only"}
+            >
+              {unreadOnly ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+            </Button>
             <Button variant="outline" size="icon" onClick={() => setSortAsc((prev) => !prev)} title="Sort order">
               <ArrowDownUp className="h-4 w-4" />
             </Button>
@@ -122,8 +135,8 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
                     href={`/read/${seriesSlug}/${ch.number}`}
                     className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
                       isRead
-                        ? "border-emerald-200 bg-emerald-50/70 text-emerald-900"
-                        : "border-border bg-background hover:bg-muted/50"
+                        ? "border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
+                        : "border-l-4 border-l-primary border-y border-r border-border bg-background font-medium hover:bg-muted/50"
                     }`}
                   >
                     <span

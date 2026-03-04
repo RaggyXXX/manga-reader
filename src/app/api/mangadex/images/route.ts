@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const resp = await fetch(`${MANGADEX_API}/at-home/server/${chapterId}`, {
-      headers: { "User-Agent": "MangaReaderPWA/1.0" },
+      headers: { "User-Agent": "MangaBlastPWA/1.0" },
     });
 
     if (!resp.ok) {

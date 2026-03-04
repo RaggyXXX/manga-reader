@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Manga Reader",
-    short_name: "MangaReader",
+    name: "Manga Blast",
+    short_name: "MangaBlast",
     description: "Cozy mobile-first manga reader with offline support",
     start_url: "/",
     display: "standalone",

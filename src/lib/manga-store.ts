@@ -2,6 +2,7 @@ const SERIES_KEY = "manga-series";
 const CHAPTERS_KEY = "manga-chapters";
 
 export type MangaSource = "manhwazone" | "mangadex" | "mangakatana" | "vymanga";
+export type ReadingStatus = "reading" | "plan_to_read" | "completed" | "on_hold" | "dropped";
 
 export interface StoredSeries {
   slug: string;
@@ -13,6 +14,8 @@ export interface StoredSeries {
   source?: MangaSource;
   sourceId?: string;
   preferredLanguage?: string;
+  isFavorite?: boolean;
+  readingStatus?: ReadingStatus;
 }
 
 export interface StoredChapter {
@@ -117,4 +120,46 @@ export function getSyncedChapterCount(slug: string): number {
 
 export function getUnsyncedChapters(slug: string): StoredChapter[] {
   return getChapters(slug).filter((ch) => ch.imageUrls.length === 0);
+}
+
+// --- Favorites & Status ---
+
+export function toggleFavorite(slug: string): boolean {
+  const map = loadJson<SeriesMap>(SERIES_KEY, {});
+  if (!map[slug]) return false;
+  map[slug].isFavorite = !map[slug].isFavorite;
+  saveJson(SERIES_KEY, map);
+  return !!map[slug].isFavorite;
+}
+
+export function updateReadingStatus(slug: string, status: ReadingStatus | undefined) {
+  const map = loadJson<SeriesMap>(SERIES_KEY, {});
+  if (!map[slug]) return;
+  if (status) {
+    map[slug].readingStatus = status;
+  } else {
+    delete map[slug].readingStatus;
+  }
+  saveJson(SERIES_KEY, map);
+}
+
+// --- Library Preferences ---
+
+const LIBRARY_PREFS_KEY = "manga-library-prefs";
+
+export type SortOption = "last_read" | "recently_added" | "alphabetical" | "chapter_count";
+
+export interface LibraryPrefs {
+  sortBy: SortOption;
+  filterStatus?: ReadingStatus;
+  filterSource?: MangaSource;
+  filterFavoritesOnly?: boolean;
+}
+
+export function getLibraryPrefs(): LibraryPrefs {
+  return loadJson<LibraryPrefs>(LIBRARY_PREFS_KEY, { sortBy: "recently_added" });
+}
+
+export function saveLibraryPrefs(prefs: LibraryPrefs) {
+  saveJson(LIBRARY_PREFS_KEY, prefs);
 }

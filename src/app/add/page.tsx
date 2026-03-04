@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LinkIcon, Search, Sparkles, X } from "lucide-react";
-import { discoverSeries, detectSource } from "@/lib/scraper";
+import { discoverSeries, detectSource, imageProxyUrl } from "@/lib/scraper";
 import { getAllSeries, saveSeries, type MangaSource } from "@/lib/manga-store";
 import { SearchResultCard } from "@/components/SearchResultCard";
 import { PreviewModal } from "@/components/PreviewModal";
@@ -212,7 +212,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      saveSeries({
+      const newSeries = {
         slug,
         title: discovered.title,
         coverUrl: discovered.coverUrl,
@@ -222,7 +222,13 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
         source: discovered.source,
         sourceId: discovered.sourceId,
         ...(preferredLanguage ? { preferredLanguage } : {}),
-      });
+      };
+      saveSeries(newSeries);
+
+      // Pre-cache cover image
+      if (discovered.coverUrl) {
+        fetch(imageProxyUrl(discovered.coverUrl, discovered.source)).catch(() => {});
+      }
 
       router.push(`/series/${slug}`);
     } catch (err) {
@@ -397,7 +403,7 @@ function UrlMode({ router }: { router: ReturnType<typeof useRouter> }) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      saveSeries({
+      const newSeries = {
         slug,
         title: discovered.title,
         coverUrl: discovered.coverUrl,
@@ -406,7 +412,13 @@ function UrlMode({ router }: { router: ReturnType<typeof useRouter> }) {
         addedAt: Date.now(),
         source: discovered.source,
         sourceId: discovered.sourceId,
-      });
+      };
+      saveSeries(newSeries);
+
+      // Pre-cache cover image
+      if (discovered.coverUrl) {
+        fetch(imageProxyUrl(discovered.coverUrl, discovered.source)).catch(() => {});
+      }
 
       router.push(`/series/${slug}`);
     } catch (err) {

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const resp = await fetch(
       `${MANGADEX_API}/manga/${id}?includes[]=cover_art`,
-      { headers: { "User-Agent": "MangaReaderPWA/1.0" } }
+      { headers: { "User-Agent": "MangaBlastPWA/1.0" } }
     );
     if (!resp.ok) {
       return NextResponse.json({ error: `MangaDex API returned ${resp.status}` }, { status: resp.status });

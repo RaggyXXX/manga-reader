@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       const url = `${MANGADEX_API}/manga/${mangaId}/feed?translatedLanguage[]=${lang}&order[chapter]=asc&limit=${PAGE_LIMIT}&offset=${offset}&includes[]=scanlation_group`;
 
       const resp = await fetch(url, {
-        headers: { "User-Agent": "MangaReaderPWA/1.0" },
+        headers: { "User-Agent": "MangaBlastPWA/1.0" },
       });
 
       if (!resp.ok) {

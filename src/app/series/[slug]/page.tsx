@@ -3,11 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { BookOpenCheck, CloudDownload, Play } from "lucide-react";
-import { getChapters, getSeries } from "@/lib/manga-store";
+import { BookOpenCheck, CloudDownload, Heart, Play } from "lucide-react";
+import {
+  getChapters,
+  getSeries,
+  toggleFavorite,
+  updateReadingStatus,
+  type ReadingStatus,
+} from "@/lib/manga-store";
 import { getLastReadChapter, getReadChapters } from "@/lib/reading-progress";
 import { imageProxyUrl } from "@/lib/scraper";
 import { ChapterList } from "@/components/ChapterList";
+import { StatusSelector } from "@/components/StatusSelector";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
 import { useSyncContext } from "@/contexts/SyncContext";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +28,8 @@ export default function SeriesPage() {
   const { phase, slug: syncSlug, startSync, stopSync } = useSyncContext();
   const isSyncing = phase !== "idle" && syncSlug === slug;
   const [refreshTick, setRefreshTick] = useState(0);
+  const [favorite, setFavorite] = useState(false);
+  const [status, setStatus] = useState<ReadingStatus | undefined>(undefined);
 
   useEffect(() => {
     if (!isSyncing) return;
@@ -30,6 +39,14 @@ export default function SeriesPage() {
 
   const series = getSeries(slug);
   const chapters = getChapters(slug);
+
+  // Initialize favorite/status from series data
+  useEffect(() => {
+    if (series) {
+      setFavorite(!!series.isFavorite);
+      setStatus(series.readingStatus);
+    }
+  }, [series?.isFavorite, series?.readingStatus]);
 
   if (!series) {
     return (
@@ -48,12 +65,23 @@ export default function SeriesPage() {
   const readSet = new Set(getReadChapters(slug));
   const nextUnread = chapterNumbers.find((n) => !readSet.has(n)) ?? null;
   const continueChapter = nextUnread ?? lastRead ?? (chapterNumbers[0] ?? null);
+  const isFullySynced = syncedCount > 0 && syncedCount >= chapters.length;
   const chaptersPlain = chapters.map((ch) => ({
     number: ch.number,
     title: ch.title,
     status: ch.imageUrls.length > 0 ? "crawled" : "pending",
     pageCount: ch.imageUrls.length,
   }));
+
+  const handleToggleFavorite = () => {
+    const newVal = toggleFavorite(slug);
+    setFavorite(newVal);
+  };
+
+  const handleStatusChange = (newStatus: ReadingStatus | undefined) => {
+    updateReadingStatus(slug, newStatus);
+    setStatus(newStatus);
+  };
 
   return (
     <div key={refreshTick} className="space-y-4">
@@ -78,7 +106,20 @@ export default function SeriesPage() {
               )}
             </div>
             <div className="space-y-3">
-              <h1 className="text-2xl font-bold tracking-tight">{series.title}</h1>
+              <div className="flex items-start gap-2">
+                <h1 className="flex-1 text-2xl font-bold tracking-tight">{series.title}</h1>
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  className="shrink-0 rounded-lg border border-border p-2 transition-colors hover:bg-muted/50"
+                  aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+                >
+                  <Heart className={`h-5 w-5 ${favorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+                </button>
+              </div>
+
+              <StatusSelector value={status} onChange={handleStatusChange} />
+
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">
                   <BookOpenCheck className="mr-1 h-3.5 w-3.5" />
@@ -107,6 +148,18 @@ export default function SeriesPage() {
                 >
                   {isSyncing ? "Stop sync" : "Sync chapters"}
                 </Button>
+                {!isSyncing && !isFullySynced && chapters.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={() => startSync(slug)}
+                    title="Download all chapters for offline reading"
+                  >
+                    <CloudDownload className="mr-1 h-4 w-4" />
+                    Download for offline
+                  </Button>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">
                 Chapter management and reading progress stay local. Reader behavior remains unchanged.

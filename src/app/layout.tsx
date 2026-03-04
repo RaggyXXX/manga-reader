@@ -22,12 +22,12 @@ const nunitoSans = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Manga Reader",
+  title: "Manga Blast",
   description: "Cozy mobile-first manga reader PWA",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Manga Reader",
+    title: "Manga Blast",
   },
 };
 

@@ -1,15 +1,17 @@
-const CACHE_NAME = "manga-reader-v2";
+const CACHE_NAME = "manga-blast-v1";
 const IMG_CACHE = "manga-images-v2";
 const API_CACHE = "manga-api-v2";
 const FONT_CACHE = "manga-fonts-v1";
+const COVER_CACHE = "manga-covers-v1";
 const MAX_IMG_CACHE = 2000;
+const MAX_COVER_CACHE = 200;
 
 self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  const keepCaches = [CACHE_NAME, IMG_CACHE, API_CACHE, FONT_CACHE];
+  const keepCaches = [CACHE_NAME, IMG_CACHE, API_CACHE, FONT_CACHE, COVER_CACHE];
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
@@ -54,6 +56,34 @@ self.addEventListener("fetch", (event) => {
       )
     );
     return;
+  }
+
+  // Cover images: cache-first (detect by /covers/ in MangaDex proxy or cover-like URLs)
+  if (url.pathname === "/api/mangadex/img" || (url.pathname === "/api/proxy" && url.searchParams.get("url")?.includes("/covers/"))) {
+    const targetUrl = url.searchParams.get("url") || "";
+    if (targetUrl.includes("/covers/") || url.pathname === "/api/mangadex/img") {
+      event.respondWith(
+        caches.open(COVER_CACHE).then((cache) =>
+          cache.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return fetch(event.request).then((response) => {
+              if (response.ok) {
+                cache.put(event.request, response.clone());
+                // Evict old covers
+                cache.keys().then((keys) => {
+                  if (keys.length > MAX_COVER_CACHE) {
+                    const toDelete = keys.slice(0, keys.length - MAX_COVER_CACHE);
+                    toDelete.forEach((req) => cache.delete(req));
+                  }
+                });
+              }
+              return response;
+            });
+          })
+        )
+      );
+      return;
+    }
   }
 
   // Image proxy: cache-first with LRU eviction

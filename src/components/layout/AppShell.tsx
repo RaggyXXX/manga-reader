@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { BarChart3, Moon, PlusCircle, Sun } from "lucide-react";
+import { BarChart3, Moon, PlusCircle, Sun, WifiOff } from "lucide-react";
 import { MobileNav } from "./MobileNav";
 import { cn } from "@/lib/utils";
 import { fadeUpVariants, motionOrInstant } from "@/lib/motion";
@@ -20,9 +20,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return resolveInitialTheme(saved, window.matchMedia("(prefers-color-scheme: dark)").matches);
   });
 
+  const [isOffline, setIsOffline] = useState(() => typeof window !== "undefined" ? !navigator.onLine : false);
+
   useEffect(() => {
     applyThemeClass(theme);
   }, [theme]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -39,9 +52,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div data-testid="app-shell" className="min-h-dvh bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur" role="banner">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="font-semibold tracking-tight">
-            Manga Reader
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center">
+              <picture>
+                <source srcSet="/mangablast.webp" type="image/webp" />
+                <img src="/mangablast.png" alt="Manga Blast" className="h-8 w-auto" />
+              </picture>
+            </Link>
+            {isOffline && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                <WifiOff className="h-3 w-3" />
+                Offline
+              </span>
+            )}
+          </div>
           <div className="hidden items-center gap-2 md:flex">
             <button
               type="button"
