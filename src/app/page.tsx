@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowDownUp,
   Filter,
   Heart,
+  LayoutGrid,
+  LayoutList,
   LibraryBig,
   Plus,
+  Search,
   Star,
   X,
 } from "lucide-react";
@@ -65,6 +68,26 @@ export default function LibraryPage() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showSourceDropdown, setShowSourceDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const viewMode = prefs.viewMode ?? "grid";
+
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [searchOpen]);
 
   const isEmpty = series.length === 0;
 
@@ -163,6 +186,12 @@ export default function LibraryPage() {
         break;
     }
 
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((s) => s.title.toLowerCase().includes(q));
+    }
+
     // Group favorites at top (unless filtering favorites only)
     if (!prefs.filterFavoritesOnly) {
       const favs = list.filter((s) => s.isFavorite);
@@ -170,12 +199,36 @@ export default function LibraryPage() {
       return { favorites: favs, rest };
     }
     return { favorites: [], rest: list };
-  }, [series, prefs]);
+  }, [series, prefs, searchQuery]);
 
   const hasActiveFilters = !!(prefs.filterSource || prefs.filterStatus || prefs.filterFavoritesOnly);
 
   return (
     <div className="space-y-7">
+      {/* Search overlay */}
+      {searchOpen && (
+        <div className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
+            <Search className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search library..."
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+              className="flex-shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {!isEmpty && (
         <ContinueReading
           series={series.map((s) => ({
@@ -342,9 +395,31 @@ export default function LibraryPage() {
               </button>
             )}
 
-            <span className="ml-auto text-xs text-muted-foreground">
-              {sortedFiltered.favorites.length + sortedFiltered.rest.length} / {series.length}
-            </span>
+            <div className="ml-auto flex items-center gap-2">
+              {/* Search button */}
+              <button
+                type="button"
+                onClick={() => { setSearchOpen(true); setShowSortDropdown(false); setShowSourceDropdown(false); setShowStatusDropdown(false); }}
+                className="flex items-center justify-center rounded-lg border border-border bg-background p-1.5 text-foreground transition-colors hover:bg-muted/50"
+                title="Search library"
+              >
+                <Search className="h-3.5 w-3.5" />
+              </button>
+
+              {/* View mode toggle */}
+              <button
+                type="button"
+                onClick={() => updatePrefs({ viewMode: viewMode === "grid" ? "list" : "grid" })}
+                className="flex items-center justify-center rounded-lg border border-border bg-background p-1.5 text-foreground transition-colors hover:bg-muted/50"
+                title={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+              >
+                {viewMode === "grid" ? <LayoutList className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
+              </button>
+
+              <span className="text-xs text-muted-foreground">
+                {sortedFiltered.favorites.length + sortedFiltered.rest.length} / {series.length}
+              </span>
+            </div>
           </div>
 
           {/* Favorites section */}
@@ -354,7 +429,7 @@ export default function LibraryPage() {
                 <Heart className="h-4 w-4 fill-red-500 text-red-500" />
                 Favorites
               </h2>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div className={viewMode === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" : "space-y-2"}>
                 {sortedFiltered.favorites.map((s) => (
                   <SeriesCard
                     key={s.slug}
@@ -371,6 +446,7 @@ export default function LibraryPage() {
                     onSelect={selectionMode ? handleSelect : undefined}
                     onLongPress={!selectionMode ? handleLongPress : undefined}
                     updateCount={updateFlags[s.slug]?.newCount}
+                    variant={viewMode}
                   />
                 ))}
               </div>
@@ -388,7 +464,7 @@ export default function LibraryPage() {
                   <h2 className="text-base font-semibold text-foreground md:text-lg">Your Series</h2>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div className={viewMode === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" : "space-y-2"}>
                 {sortedFiltered.rest.map((s) => (
                   <SeriesCard
                     key={s.slug}
@@ -405,6 +481,7 @@ export default function LibraryPage() {
                     onSelect={selectionMode ? handleSelect : undefined}
                     onLongPress={!selectionMode ? handleLongPress : undefined}
                     updateCount={updateFlags[s.slug]?.newCount}
+                    variant={viewMode}
                   />
                 ))}
               </div>

@@ -24,6 +24,7 @@ interface SeriesCardProps {
   onSelect?: (slug: string) => void;
   onLongPress?: (slug: string) => void;
   updateCount?: number;
+  variant?: "grid" | "list";
 }
 
 export function SeriesCard({
@@ -40,6 +41,7 @@ export function SeriesCard({
   onSelect,
   onLongPress,
   updateCount,
+  variant = "grid",
 }: SeriesCardProps) {
   const reduced = useReducedMotion();
   const readCount = getReadChapters(slug).length;
@@ -68,7 +70,87 @@ export function SeriesCard({
     }
   };
 
-  const cardContent = (
+  const listContent = (
+    <div className="flex items-center gap-3 p-2">
+      {/* Selection checkbox */}
+      {selectable && (
+        <div className="flex-shrink-0">
+          <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
+            selected ? "border-primary bg-primary text-primary-foreground" : "border-border"
+          }`}>
+            {selected && (
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Cover thumbnail */}
+      <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-muted/40">
+        {coverUrl ? (
+          <img
+            src={imageProxyUrl(coverUrl, source)}
+            alt={title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-muted to-secondary">
+            <span className="text-lg font-bold text-muted-foreground/60">{title.charAt(0).toUpperCase()}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <h3 className="truncate text-sm font-semibold text-foreground">{title}</h3>
+          {readingStatus && <StatusBadge status={readingStatus} />}
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={readCount > 0 ? "default" : "muted"} className="text-[10px]">
+            {readCount > 0 ? `${readCount} / ${totalChapters} Ch.` : `${totalChapters} Ch.`}
+          </Badge>
+          <span className="text-[10px] text-muted-foreground">{Math.round(progress)}%</span>
+          {updateCount != null && updateCount > 0 && (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+              NEW +{updateCount}
+            </span>
+          )}
+          {unreadCount > 0 && (
+            <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 py-0.5 text-[10px] font-bold text-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </div>
+        <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+          <motion.div
+            className="h-full rounded-full bg-primary"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={motionOrInstant(!!reduced, 0.35)}
+          />
+        </div>
+      </div>
+
+      {/* Favorite heart */}
+      {onToggleFavorite && (
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(slug); }}
+          className="flex-shrink-0 rounded-full p-1.5 transition-colors hover:bg-muted"
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Heart className={`h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+        </button>
+      )}
+    </div>
+  );
+
+  const gridContent = (
     <>
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted/40">
         {coverUrl ? (
@@ -178,7 +260,7 @@ export function SeriesCard({
           selected ? "ring-2 ring-primary border-primary" : "border-border/70"
         }`}
       >
-        {cardContent}
+        {variant === "list" ? listContent : gridContent}
       </Link>
     </motion.div>
   );

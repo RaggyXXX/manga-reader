@@ -154,6 +154,7 @@ export interface LibraryPrefs {
   filterStatus?: ReadingStatus;
   filterSource?: MangaSource;
   filterFavoritesOnly?: boolean;
+  viewMode?: "grid" | "list";
 }
 
 export function getLibraryPrefs(): LibraryPrefs {
