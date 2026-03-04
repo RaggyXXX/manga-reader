@@ -30,8 +30,15 @@ function isErrorPage(html: string): boolean {
   );
 }
 
+function looksLikeHtml(html: string): boolean {
+  // Must contain an HTML tag somewhere in the first 500 chars
+  // This filters out binary data (WEBP, images) that Cloudflare returns as challenges
+  const head = html.slice(0, 500);
+  return head.includes("<html") || head.includes("<!DOCTYPE") || head.includes("<!doctype") || head.includes("<HTML");
+}
+
 function isValidHtml(html: string | null | undefined): html is string {
-  return !!html && html.length > 200 && !isErrorPage(html);
+  return !!html && html.length > 200 && looksLikeHtml(html) && !isErrorPage(html);
 }
 
 interface AttemptResult {

@@ -15,6 +15,14 @@ async function fetchHtml(url: string): Promise<Document> {
   if (!text || text.length < 200) {
     throw new Error("Proxy returned empty/short response");
   }
+  // Detect binary data (Cloudflare WEBP challenge) or error pages
+  const head = text.slice(0, 500);
+  if (!head.includes("<html") && !head.includes("<!DOCTYPE") && !head.includes("<!doctype")) {
+    throw new Error("Proxy returned non-HTML (possible Cloudflare challenge)");
+  }
+  if (head.includes("<title>Just a moment") || head.includes("cf-challenge") || head.includes("<title>Attention Required")) {
+    throw new Error("Proxy returned Cloudflare challenge page");
+  }
   return new DOMParser().parseFromString(text, "text/html");
 }
 
