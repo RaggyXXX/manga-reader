@@ -250,25 +250,17 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sources</p>
-            <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="relative">
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value as MangaSource | "all")}
+              className="w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 pr-8 text-sm font-medium text-foreground transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            >
               {SOURCE_FILTERS.map((sf) => (
-                <button
-                  key={sf.key}
-                  type="button"
-                  className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    sourceFilter === sf.key
-                      ? "border-primary/50 bg-primary/10 text-primary"
-                      : "border-border bg-background text-muted-foreground hover:text-foreground"
-                  }`}
-                  onClick={() => setSourceFilter(sf.key)}
-                >
-                  <span className="h-2 w-2 rounded-full" style={{ background: sf.color }} />
-                  {sf.label}
-                </button>
+                <option key={sf.key} value={sf.key}>{sf.label}</option>
               ))}
-            </div>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
