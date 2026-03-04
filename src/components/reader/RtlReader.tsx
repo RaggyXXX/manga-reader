@@ -196,6 +196,7 @@ export default function RtlReader({
               fadeState === "entering" ? styles.entering : styles.visible
             }`}
             draggable={false}
+            referrerPolicy="no-referrer"
           />
         )}
       </div>

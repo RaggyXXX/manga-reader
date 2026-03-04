@@ -214,6 +214,7 @@ export default function DoublePageReader({
           alt={`Seite ${pageIndex + 1}`}
           className={`${styles.singleImage} ${fitClass}`}
           draggable={false}
+          referrerPolicy="no-referrer"
         />
       );
     }
@@ -233,6 +234,7 @@ export default function DoublePageReader({
           alt={`Seite ${leftIdx + 1}`}
           className={`${styles.singleImage} ${fitClass}`}
           draggable={false}
+          referrerPolicy="no-referrer"
         />
       );
     }
@@ -246,6 +248,7 @@ export default function DoublePageReader({
           alt={`Seite ${leftIdx + 1}`}
           className={styles.spreadImage}
           draggable={false}
+          referrerPolicy="no-referrer"
         />
         <img
           key={`r-${rightIdx}`}
@@ -253,6 +256,7 @@ export default function DoublePageReader({
           alt={`Seite ${rightIdx + 1}`}
           className={styles.spreadImage}
           draggable={false}
+          referrerPolicy="no-referrer"
         />
       </>
     );

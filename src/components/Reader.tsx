@@ -167,6 +167,7 @@ export function Reader({
             alt={`Seite ${i + 1}`}
             className={styles.image}
             loading={i < 3 ? "eager" : "lazy"}
+            referrerPolicy="no-referrer"
           />
         ))}
 

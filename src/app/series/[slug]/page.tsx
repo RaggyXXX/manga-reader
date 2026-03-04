@@ -81,6 +81,7 @@ export default function SeriesPage() {
             src={imageProxyUrl(series.coverUrl)}
             alt={series.title}
             className={styles.cover}
+            referrerPolicy="no-referrer"
           />
         ) : (
           <div className={styles.coverPlaceholder}>&#9744;</div>

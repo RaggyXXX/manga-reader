@@ -199,6 +199,7 @@ export default function PageReader({
               fadeState === "entering" ? styles.entering : styles.visible
             }`}
             draggable={false}
+            referrerPolicy="no-referrer"
           />
         )}
       </div>

@@ -142,6 +142,7 @@ export default function VerticalReader({
             className={`${styles.image} ${fitClass}`}
             loading={i < 3 ? "eager" : "lazy"}
             draggable={false}
+            referrerPolicy="no-referrer"
           />
         ))}
 

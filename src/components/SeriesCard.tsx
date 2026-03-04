@@ -37,6 +37,7 @@ export function SeriesCard({
             alt={title}
             className={styles.cover}
             loading="lazy"
+            referrerPolicy="no-referrer"
           />
         ) : (
           <div className={styles.placeholder}>
