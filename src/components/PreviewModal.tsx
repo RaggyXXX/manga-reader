@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MangaSource } from "@/lib/manga-store";
+import { motionOrInstant } from "@/lib/motion";
 
 const SOURCE_LABELS: Record<MangaSource, string> = {
   mangadex: "MangaDex",
@@ -56,6 +57,7 @@ interface PreviewModalProps {
 }
 
 export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps) {
+  const reduced = useReducedMotion();
   const [meta, setMeta] = useState<PreviewMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLang, setSelectedLang] = useState<string>("en");
@@ -146,7 +148,7 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        transition={{ duration: 0.2 }}
+        transition={motionOrInstant(!!reduced, 0.2)}
         className="mx-auto flex h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >

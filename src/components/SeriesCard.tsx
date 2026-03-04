@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { getReadChapters } from "@/lib/reading-progress";
 import { imageProxyUrl } from "@/lib/scraper";
 import type { MangaSource } from "@/lib/manga-store";
+import { motionOrInstant } from "@/lib/motion";
 
 interface SeriesCardProps {
   slug: string;
@@ -22,6 +23,7 @@ export function SeriesCard({
   totalChapters,
   source,
 }: SeriesCardProps) {
+  const reduced = useReducedMotion();
   const readCount = getReadChapters(slug).length;
   const progress = totalChapters > 0 ? Math.min((readCount / totalChapters) * 100, 100) : 0;
 
@@ -30,7 +32,7 @@ export function SeriesCard({
       initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.28, ease: "easeOut" }}
+      transition={motionOrInstant(!!reduced, 0.28)}
     >
       <Link
         href={`/series/${slug}`}
@@ -71,7 +73,7 @@ export function SeriesCard({
               className="h-full rounded-full bg-primary"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
+              transition={motionOrInstant(!!reduced, 0.35)}
             />
           </div>
         </div>

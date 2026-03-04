@@ -1,9 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { MangaSource } from "@/lib/manga-store";
+import { motionOrInstant } from "@/lib/motion";
 
 const SOURCE_COLORS: Record<MangaSource, string> = {
   mangadex: "#ff6740",
@@ -40,6 +41,7 @@ export function SearchResultCard({
   disabled,
   onClick,
 }: SearchResultCardProps) {
+  const reduced = useReducedMotion();
   const sortedLangs = availableLanguages
     ? [...availableLanguages].sort((a, b) => {
         const ai = PRIORITY_LANGS.indexOf(a);
@@ -59,7 +61,7 @@ export function SearchResultCard({
   return (
     <motion.button
       whileHover={{ y: -2 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
+      transition={motionOrInstant(!!reduced, 0.15)}
       className="group relative flex w-full items-start gap-3 overflow-hidden rounded-2xl border border-border/70 bg-card p-3 text-left shadow-sm transition-colors hover:bg-card/80 disabled:cursor-not-allowed disabled:opacity-60"
       onClick={onClick}
       disabled={disabled || loading}

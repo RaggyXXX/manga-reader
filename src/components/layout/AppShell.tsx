@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, useReducedMotion } from "framer-motion";
 import { BarChart3, PlusCircle } from "lucide-react";
 import { MobileNav } from "./MobileNav";
 import { cn } from "@/lib/utils";
+import { fadeUpVariants, motionOrInstant } from "@/lib/motion";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isReaderRoute = pathname.startsWith("/read/");
+  const reduced = useReducedMotion();
 
   if (isReaderRoute) {
     return <div data-testid="app-shell">{children}</div>;
@@ -49,7 +52,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-6 md:pb-8">{children}</main>
+      <motion.main
+        variants={fadeUpVariants}
+        initial="hidden"
+        animate="visible"
+        transition={motionOrInstant(!!reduced)}
+        className="mx-auto w-full max-w-5xl px-4 pb-24 pt-6 md:pb-8"
+      >
+        {children}
+      </motion.main>
       <MobileNav />
     </div>
   );
