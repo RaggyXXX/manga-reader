@@ -137,6 +137,14 @@ export function Reader({
     []
   );
 
+  const handleBack = useCallback(() => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    window.location.assign("/");
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -145,11 +153,11 @@ export function Reader({
     >
       {/* Top bar */}
       <div className={`${styles.topBar} ${barsVisible ? "" : styles.hidden}`}>
-        <button className={styles.backBtn} onClick={() => window.history.back()}>
-          &#8592;
+        <button className={styles.backBtn} onClick={handleBack} aria-label="Go back">
+          &#8250;
         </button>
         <span className={styles.topTitle}>
-          Kap. {chapterNumber}
+          Ch. {chapterNumber}
         </span>
         <span className={styles.pageIndicator}>
           {currentImage}/{imageUrls.length}
@@ -164,7 +172,7 @@ export function Reader({
             ref={(el) => { imageRefs.current[i] = el; }}
             data-index={i}
             src={imageProxyUrl(url)}
-            alt={`Seite ${i + 1}`}
+            alt={`Page ${i + 1}`}
             className={styles.image}
             loading={i < 3 ? "eager" : "lazy"}
             referrerPolicy="no-referrer"
@@ -181,10 +189,10 @@ export function Reader({
                 onNavigate(nextChapter);
               }}
             >
-              Naechstes Kapitel ({nextChapter}) &rarr;
+              Next chapter ({nextChapter}) &rarr;
             </button>
           ) : (
-            <p className={styles.endText}>Ende der Serie</p>
+            <p className={styles.endText}>End of series</p>
           )}
         </div>
       </div>
@@ -199,7 +207,7 @@ export function Reader({
             if (prevChapter) onNavigate(prevChapter);
           }}
         >
-          &larr; Vorher
+          &larr; Previous
         </button>
         <span className={styles.chapterLabel}>
           {currentImage} / {imageUrls.length}
@@ -212,7 +220,7 @@ export function Reader({
             if (nextChapter) onNavigate(nextChapter);
           }}
         >
-          Naechstes &rarr;
+          Next &rarr;
         </button>
       </div>
     </div>

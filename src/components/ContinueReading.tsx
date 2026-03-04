@@ -65,7 +65,7 @@ export function ContinueReading({ series }: ContinueReadingProps) {
   return (
     <section className="mb-8">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground md:text-lg">Weiterlesen</h2>
+        <h2 className="text-base font-semibold text-foreground md:text-lg">Continue Reading</h2>
       </div>
       <div className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1">
         {items.map((item, index) => {
@@ -87,7 +87,7 @@ export function ContinueReading({ series }: ContinueReadingProps) {
               className="group relative min-h-40 min-w-[72%] snap-start overflow-hidden rounded-2xl border border-border/70 bg-card text-left shadow-sm sm:min-w-[320px]"
               onClick={() => router.push(`/read/${item.slug}/${item.lastReadChapter}`)}
               type="button"
-              aria-label={`${item.title} weiterlesen - Kapitel ${item.lastReadChapter}`}
+              aria-label={`${item.title} continue reading - chapter ${item.lastReadChapter}`}
             >
               {coverSrc ? (
                 <div
@@ -99,14 +99,14 @@ export function ContinueReading({ series }: ContinueReadingProps) {
               <div className="relative flex h-full flex-col justify-between p-4">
                 <div>
                   <p className="line-clamp-2 text-sm font-semibold text-foreground">{item.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Kapitel {item.lastReadChapter}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Chapter {item.lastReadChapter}</p>
                 </div>
                 <div className="space-y-2">
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                     <div className="h-full rounded-full bg-primary" style={{ width: `${chapterProgress}%` }} />
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{Math.round(chapterProgress)}% gelesen</span>
+                    <span>{Math.round(chapterProgress)}% read</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </div>
                 </div>

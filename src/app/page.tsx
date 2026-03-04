@@ -26,13 +26,13 @@ export default function LibraryPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Manga Reader</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Cozy reading library, komplett responsive und auf mobile optimiert.
+              Cozy reading library, fully responsive and mobile optimized.
             </p>
           </div>
           <Link href="/add">
             <Button size="sm" className="shadow-sm">
               <Plus className="h-4 w-4" />
-              Serie
+              Add
             </Button>
           </Link>
         </div>
@@ -60,22 +60,22 @@ export default function LibraryPage() {
           <div className="mb-4 rounded-2xl bg-muted p-4">
             <LibraryBig className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">Deine Bibliothek ist leer</h2>
+          <h2 className="text-lg font-semibold text-foreground">Your library is empty</h2>
           <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Fuge deine erste Serie hinzu, um Kapitel zu cachen und nahtlos auf allen Geraeten weiterzulesen.
+            Add your first series to cache chapters and continue seamlessly across devices.
           </p>
           <Link href="/add" className="mt-5">
             <Button>
               <Plus className="h-4 w-4" />
-              Serie hinzufuegen
+              Add Series
             </Button>
           </Link>
         </motion.section>
       ) : (
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground md:text-lg">Deine Serien</h2>
-            <span className="text-xs text-muted-foreground">{series.length} Eintraege</span>
+            <h2 className="text-base font-semibold text-foreground md:text-lg">Your Series</h2>
+            <span className="text-xs text-muted-foreground">{series.length} Entries</span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {series.map((s) => (
@@ -92,7 +92,7 @@ export default function LibraryPage() {
         </section>
       )}
 
-      <Link href="/add" className="fixed bottom-20 right-4 z-50 md:hidden" aria-label="Serie hinzufuegen">
+      <Link href="/add" className="fixed bottom-20 right-4 z-50 md:hidden" aria-label="Add series">
         <Button size="icon" className="h-12 w-12 rounded-full shadow-lg">
           <Plus className="h-5 w-5" />
         </Button>

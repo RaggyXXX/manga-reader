@@ -131,10 +131,10 @@ export default function ReaderSettingsDrawer({
   /* ── Reading mode definitions ──────────────── */
 
   const readingModes: { value: ReadingMode; label: string; icon: React.ReactNode }[] = [
-    { value: 'vertical', label: 'Vertikal', icon: <IconVertical /> },
-    { value: 'page', label: 'Seite', icon: <IconPage /> },
+    { value: 'vertical', label: 'Vertical', icon: <IconVertical /> },
+    { value: 'page', label: 'Paged', icon: <IconPage /> },
     { value: 'rtl', label: 'RTL', icon: <IconRtl /> },
-    { value: 'double-page', label: 'Doppel', icon: <IconDouble /> },
+    { value: 'double-page', label: 'Double', icon: <IconDouble /> },
   ];
 
   /* ── Background presets ────────────────────── */
@@ -149,10 +149,10 @@ export default function ReaderSettingsDrawer({
   /* ── Image fit presets ─────────────────────── */
 
   const fitModes: { value: ImageFitMode; label: string }[] = [
-    { value: 'fit-width', label: 'Breite' },
-    { value: 'fit-height', label: 'Hoehe' },
+    { value: 'fit-width', label: 'Fit width' },
+    { value: 'fit-height', label: 'Fit height' },
     { value: 'original', label: 'Original' },
-    { value: 'fit-screen', label: 'Einpassen' },
+    { value: 'fit-screen', label: 'Fit screen' },
   ];
 
   /* ── Render ────────────────────────────────── */
@@ -170,7 +170,7 @@ export default function ReaderSettingsDrawer({
       <div
         className={`${styles.drawer} ${visible ? styles.visible : ''}`}
         role="dialog"
-        aria-label="Leser-Einstellungen"
+        aria-label="Reader settings"
         aria-modal="true"
       >
         {/* Drag handle (decorative) */}
@@ -192,7 +192,7 @@ export default function ReaderSettingsDrawer({
 
         {/* ── Section 1: Lesemodus ─────────────── */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Lesemodus</div>
+          <div className={styles.sectionLabel}>Reading mode</div>
           <div className={styles.modeRow}>
             {readingModes.map((mode) => (
               <button
@@ -213,11 +213,11 @@ export default function ReaderSettingsDrawer({
 
         {/* ── Section 2: Anzeige ───────────────── */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Anzeige</div>
+          <div className={styles.sectionLabel}>Display</div>
 
           {/* Helligkeit */}
           <div className={styles.subSection}>
-            <div className={styles.subLabel}>Helligkeit</div>
+            <div className={styles.subLabel}>Brightness</div>
             <div className={styles.sliderRow}>
               <span className={styles.sliderIcon}>
                 <IconSunDim />
@@ -230,7 +230,7 @@ export default function ReaderSettingsDrawer({
                 step={0.05}
                 value={settings.brightness}
                 onChange={(e) => update('brightness', parseFloat(e.target.value))}
-                aria-label="Helligkeit"
+                aria-label="Brightness"
               />
               <span className={styles.sliderIcon}>
                 <IconSunBright />
@@ -240,7 +240,7 @@ export default function ReaderSettingsDrawer({
 
           {/* Hintergrund */}
           <div className={styles.subSection}>
-            <div className={styles.subLabel}>Hintergrund</div>
+            <div className={styles.subLabel}>Background</div>
             <div className={styles.bgRow}>
               {bgPresets.map((bg) => (
                 <button
@@ -249,7 +249,7 @@ export default function ReaderSettingsDrawer({
                     settings.background === bg.value ? styles.active : ''
                   }`}
                   onClick={() => update('background', bg.value)}
-                  aria-label={`Hintergrund: ${bg.value}`}
+                  aria-label={`Background: ${bg.value}`}
                   aria-pressed={settings.background === bg.value}
                   type="button"
                 />
@@ -259,7 +259,7 @@ export default function ReaderSettingsDrawer({
 
           {/* Bildanpassung */}
           <div className={styles.subSection}>
-            <div className={styles.subLabel}>Bildanpassung</div>
+            <div className={styles.subLabel}>Image fit</div>
             <div className={styles.pillRow}>
               {fitModes.map((fit) => (
                 <button
@@ -300,7 +300,7 @@ export default function ReaderSettingsDrawer({
             {/* Speed slider (only when auto-scroll enabled) */}
             {settings.autoScroll && (
               <div className={styles.speedSection}>
-                <div className={styles.sliderLabel}>Geschwindigkeit</div>
+                <div className={styles.sliderLabel}>Speed</div>
                 <div className={styles.sliderRow}>
                   <span className={styles.sliderIcon} aria-hidden="true">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -320,7 +320,7 @@ export default function ReaderSettingsDrawer({
                     step={10}
                     value={settings.autoScrollSpeed}
                     onChange={(e) => update('autoScrollSpeed', parseInt(e.target.value, 10))}
-                    aria-label="Auto-Scroll Geschwindigkeit"
+                    aria-label="Auto-scroll speed"
                   />
                   <span className={styles.sliderIcon} aria-hidden="true">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -345,7 +345,7 @@ export default function ReaderSettingsDrawer({
           <div className={styles.sectionLabel}>Extras</div>
 
           <div className={styles.toggleRow}>
-            <span className={styles.toggleLabel}>Fortschrittsleiste</span>
+            <span className={styles.toggleLabel}>Progress bar</span>
             <button
               className={`${styles.toggle} ${settings.showProgressBar ? styles.on : ''}`}
               onClick={() => update('showProgressBar', !settings.showProgressBar)}
@@ -358,7 +358,7 @@ export default function ReaderSettingsDrawer({
           </div>
 
           <div className={styles.toggleRow}>
-            <span className={styles.toggleLabel}>Naechstes Kapitel vorladen</span>
+            <span className={styles.toggleLabel}>Preload next chapter</span>
             <button
               className={`${styles.toggle} ${settings.preloadNextChapter ? styles.on : ''}`}
               onClick={() => update('preloadNextChapter', !settings.preloadNextChapter)}
@@ -371,7 +371,7 @@ export default function ReaderSettingsDrawer({
           </div>
 
           <div className={styles.toggleRow}>
-            <span className={styles.toggleLabel}>Doppel-Tap Zoom</span>
+            <span className={styles.toggleLabel}>Double-tap zoom</span>
             <button
               className={`${styles.toggle} ${settings.doubleTapZoom ? styles.on : ''}`}
               onClick={() => update('doubleTapZoom', !settings.doubleTapZoom)}

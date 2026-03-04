@@ -43,13 +43,13 @@ test.beforeEach(async ({ page }) => {
 
 test("reader route renders controls and chapter context", async ({ page }) => {
   await page.goto("/read/smoke-series/1");
-  await expect(page.getByRole("button", { name: /einstellungen/i })).toBeVisible();
-  await expect(page.getByText(/kap\.\s*1/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /settings/i })).toBeVisible();
+  await expect(page.getByText(/ch\.\s*1/i)).toBeVisible();
 });
 
 test("reader provides quick settings preset actions", async ({ page }) => {
   await page.goto("/read/smoke-series/1");
-  await page.getByRole("button", { name: /einstellungen/i }).click();
+  await page.getByRole("button", { name: /settings/i }).click();
   await expect(page.getByRole("button", { name: /cozy day/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /night read/i })).toBeVisible();
 });

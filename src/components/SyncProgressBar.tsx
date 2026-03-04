@@ -12,7 +12,7 @@ export function SyncProgressBar() {
     return (
       <div className="sticky top-16 z-40 mx-auto mb-2 w-full max-w-5xl px-4">
         <div className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-900">
-          {error || "Sync fehlgeschlagen"}
+          {error || "Sync failed"}
         </div>
       </div>
     );
@@ -30,7 +30,7 @@ export function SyncProgressBar() {
         />
         <div className="relative flex items-center justify-between gap-2">
           <span className="text-xs font-medium text-foreground">
-            {isDiscovering ? `Kapitel entdecken... ${discovered}` : `${completed} / ${total}`}
+            {isDiscovering ? `Discovering chapters... ${discovered}` : `${completed} / ${total}`}
           </span>
           <Button size="sm" variant="outline" onClick={stopSync} className="h-7 text-xs">
             Stop

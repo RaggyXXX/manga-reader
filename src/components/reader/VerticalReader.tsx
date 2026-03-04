@@ -138,7 +138,7 @@ export default function VerticalReader({
             ref={(el) => setImageRef(el, i)}
             data-index={i}
             src={imageProxyUrl(url)}
-            alt={`Seite ${i + 1}`}
+            alt={`Page ${i + 1}`}
             className={`${styles.image} ${fitClass}`}
             loading={i < 3 ? "eager" : "lazy"}
             draggable={false}
@@ -156,10 +156,10 @@ export default function VerticalReader({
                 onNavigateNext();
               }}
             >
-              Naechstes Kapitel ({nextChapter}) &#8594;
+              Next chapter ({nextChapter}) &#8594;
             </button>
           ) : (
-            <p className={styles.endText}>Ende der Serie</p>
+            <p className={styles.endText}>End of series</p>
           )}
         </div>
       </div>

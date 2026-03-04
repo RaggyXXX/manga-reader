@@ -78,23 +78,23 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Kapitel suchen..."
+                placeholder="Search chapters..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <Button variant="outline" size="icon" onClick={() => setSortAsc((prev) => !prev)} title="Sortierung">
+            <Button variant="outline" size="icon" onClick={() => setSortAsc((prev) => !prev)} title="Sort order">
               <ArrowDownUp className="h-4 w-4" />
             </Button>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={handleMarkAllRead} type="button">
-              Alle gelesen
+              Mark all read
             </Button>
             <Button variant="outline" size="sm" onClick={handleClearProgress} type="button">
-              Alle ungelesen
+              Mark all unread
             </Button>
             <Button size="sm" onClick={isSyncing ? handleStopSync : handleSync} type="button">
               {isSyncing ? "Stop Sync" : "Sync All"}
@@ -103,13 +103,13 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
         </div>
 
         <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-xs text-muted-foreground">
-          <span>{pendingCount > 0 ? `${pendingCount} Kapitel noch nicht geladen` : `${chapters.length} Kapitel`}</span>
+          <span>{pendingCount > 0 ? `${pendingCount} chapters not yet loaded` : `${chapters.length} chapters`}</span>
           <Badge variant={isSyncing ? "default" : "muted"}>{isSyncing ? "Syncing" : "Idle"}</Badge>
         </div>
 
         {filteredChapters.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Keine Kapitel gefunden
+            No chapters found
           </div>
         ) : (
           <ul className="space-y-2">

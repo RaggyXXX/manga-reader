@@ -40,7 +40,7 @@ export default function ReaderLoading() {
         <circle cx="24" cy="24" r="4" fill="#e8a849" opacity="0.9" />
       </svg>
 
-      <p className={styles.text}>Kapitel wird geladen...</p>
+      <p className={styles.text}>Loading chapter...</p>
     </div>
   );
 }

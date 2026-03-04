@@ -60,7 +60,7 @@ export default function ChapterSlider({
 
   return (
     <div className={styles.overlay}>
-      <div ref={panelRef} className={styles.panel} role="listbox" aria-label="Kapitelauswahl">
+      <div ref={panelRef} className={styles.panel} role="listbox" aria-label="Chapter picker">
         {chapters.map((chapter) => {
           const isActive = chapter === current;
           return (
@@ -72,7 +72,7 @@ export default function ChapterSlider({
               aria-selected={isActive}
               onClick={() => onSelect(chapter)}
             >
-              Kapitel {chapter}
+              Chapter {chapter}
             </button>
           );
         })}

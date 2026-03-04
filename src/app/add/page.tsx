@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LinkIcon, Search, Sparkles } from "lucide-react";
 import { discoverSeries, detectSource } from "@/lib/scraper";
@@ -14,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 
 interface SearchResult {
   title: string;
@@ -27,7 +27,7 @@ interface SearchResult {
 type Mode = "search" | "url";
 
 const SOURCE_FILTERS: { key: MangaSource | "all"; label: string; color: string }[] = [
-  { key: "all", label: "Alle", color: "#b57f44" },
+  { key: "all", label: "All", color: "#b57f44" },
   { key: "mangadex", label: "MangaDex", color: "#ff6740" },
   { key: "mangakatana", label: "MangaKatana", color: "#4a90d9" },
   { key: "vymanga", label: "VyManga", color: "#6bc95b" },
@@ -49,18 +49,16 @@ export default function AddSeriesPage() {
     <div className="space-y-5">
       <header className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Serie hinzufuegen</h1>
-          <p className="text-sm text-muted-foreground">Suche plattformuebergreifend oder fuege per URL hinzu.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Add Series</h1>
+          <p className="text-sm text-muted-foreground">Search across sources or add directly with a URL.</p>
         </div>
-        <Link href="/">
-          <Button variant="outline" size="sm">Zurueck</Button>
-        </Link>
+        <ContextBackChevron />
       </header>
 
       <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>
         <TabsList>
           <TabsTrigger value="search">
-            <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Suche</span>
+            <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Search</span>
           </TabsTrigger>
           <TabsTrigger value="url">
             <span className="inline-flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL</span>
@@ -76,7 +74,7 @@ export default function AddSeriesPage() {
 
       <Card>
         <CardContent className="p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unterstuetzte Quellen</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Supported Sources</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {SOURCES.map((s) => (
               <div key={s.name} className="flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2">
@@ -131,7 +129,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       if (!controller.signal.aborted) {
-        setError(err instanceof Error ? err.message : "Suche fehlgeschlagen");
+        setError(err instanceof Error ? err.message : "Search failed");
         setResults([]);
         setSearched(true);
       }
@@ -207,7 +205,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
       router.push(`/series/${slug}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`Fehler beim Laden der Serie: ${msg}`);
+      setError(`Failed to load series: ${msg}`);
       setPreview(null);
     } finally {
       setAddingUrl(null);
@@ -224,7 +222,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Manga suchen..."
+              placeholder="Search manga..."
               className="pl-9"
               autoFocus
             />
@@ -250,7 +248,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {partialErrors.length > 0 ? (
-            <p className="text-xs text-amber-700">Einige Quellen nicht erreichbar: {partialErrors.join(", ")}</p>
+            <p className="text-xs text-amber-700">Some sources are unavailable: {partialErrors.join(", ")}</p>
           ) : null}
         </CardContent>
       </Card>
@@ -275,7 +273,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
         <Card>
           <CardContent className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
             <Sparkles className="h-4 w-4" />
-            Keine Ergebnisse gefunden
+            No results found
           </CardContent>
         </Card>
       ) : null}
@@ -298,7 +296,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
       ) : null}
 
       {!searching && !searched && query.trim().length > 0 && query.trim().length < 2 ? (
-        <p className="text-sm text-muted-foreground">Mindestens 2 Zeichen eingeben</p>
+        <p className="text-sm text-muted-foreground">Enter at least 2 characters</p>
       ) : null}
 
       {preview ? (
@@ -330,7 +328,7 @@ function UrlMode({ router }: { router: ReturnType<typeof useRouter> }) {
       const source = detectSource(trimmedUrl);
       const supported = ["manhwazone", "mangadex", "mangakatana", "vymanga"];
       if (!supported.includes(source)) {
-        setError("Nicht unterstuetzte Seite. Unterstuetzt: MangaDex, MangaKatana, VyManga, Manhwazone");
+        setError("Unsupported source. Supported: MangaDex, MangaKatana, VyManga, Manhwazone");
         setLoading(false);
         return;
       }
@@ -355,7 +353,7 @@ function UrlMode({ router }: { router: ReturnType<typeof useRouter> }) {
       router.push(`/series/${slug}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`Fehler beim Laden der Serie: ${msg}`);
+      setError(`Failed to load series: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -371,14 +369,14 @@ function UrlMode({ router }: { router: ReturnType<typeof useRouter> }) {
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://mangadex.org/title/... oder manhwazone.to/series/..."
+              placeholder="https://mangadex.org/title/... or manhwazone.to/series/..."
               disabled={loading}
               autoFocus
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <Button type="submit" className="w-full" disabled={loading || !url.trim()}>
-            {loading ? "Serie wird geladen..." : "Serie entdecken"}
+            {loading ? "Loading series..." : "Discover series"}
           </Button>
         </form>
 

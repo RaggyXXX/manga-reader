@@ -7,6 +7,7 @@ import { getChapter, getChapters, getSeries, saveChapter } from "@/lib/manga-sto
 import { imageProxyUrl, scrapeChapterImages } from "@/lib/scraper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 
 export default function ReaderPage() {
   const params = useParams();
@@ -31,7 +32,7 @@ export default function ReaderPage() {
 
     const ch = getChapter(slug, chapterNum);
     if (!ch) {
-      setError("Kapitel nicht gefunden.");
+      setError("Chapter not found.");
       setLoading(false);
       return;
     }
@@ -58,10 +59,10 @@ export default function ReaderPage() {
         saveChapter(slug, { ...ch, imageUrls: images, syncedAt: Date.now() });
         setImageUrls(images.map((u) => imageProxyUrl(u, source)));
       } else {
-        setError("Keine Bilder gefunden.");
+        setError("No images found.");
       }
     } catch {
-      setError("Fehler beim Laden der Bilder.");
+      setError("Failed to load images.");
     } finally {
       setLoading(false);
     }
@@ -88,7 +89,7 @@ export default function ReaderPage() {
         <Card className="w-full max-w-sm">
           <CardContent className="space-y-3 p-6 text-center">
             <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-            <p className="text-sm text-muted-foreground">Kapitel wird geladen...</p>
+            <p className="text-sm text-muted-foreground">Loading chapter...</p>
           </CardContent>
         </Card>
       </div>
@@ -102,10 +103,8 @@ export default function ReaderPage() {
           <CardContent className="space-y-3 p-6 text-center">
             <p className="text-sm text-destructive">{error}</p>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-              <Button onClick={fetchChapter}>Erneut versuchen</Button>
-              <Button variant="outline" onClick={() => router.back()}>
-                Zurueck
-              </Button>
+              <Button onClick={fetchChapter}>Retry</Button>
+              <ContextBackChevron />
             </div>
           </CardContent>
         </Card>
@@ -118,12 +117,10 @@ export default function ReaderPage() {
       <div className="flex min-h-[70vh] items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="space-y-3 p-6 text-center">
-            <p className="text-sm text-muted-foreground">Keine Bilder gefunden.</p>
+            <p className="text-sm text-muted-foreground">No images found.</p>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-              <Button onClick={fetchChapter}>Erneut versuchen</Button>
-              <Button variant="outline" onClick={() => router.back()}>
-                Zurueck
-              </Button>
+              <Button onClick={fetchChapter}>Retry</Button>
+              <ContextBackChevron />
             </div>
           </CardContent>
         </Card>

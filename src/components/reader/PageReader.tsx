@@ -184,17 +184,17 @@ export default function PageReader({
                   onNavigateNext();
                 }}
               >
-                Naechstes Kapitel ({nextChapter}) &rarr;
+                Next chapter ({nextChapter}) &rarr;
               </button>
             ) : (
-              <p className={styles.endText}>Ende der Serie</p>
+              <p className={styles.endText}>End of series</p>
             )}
           </div>
         ) : (
           <img
             key={currentPage}
             src={imageProxyUrl(imageUrls[currentPage])}
-            alt={`Seite ${currentPage + 1}`}
+            alt={`Page ${currentPage + 1}`}
             className={`${styles.pageImage} ${fitClass} ${
               fadeState === "entering" ? styles.entering : styles.visible
             }`}

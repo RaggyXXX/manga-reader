@@ -195,10 +195,10 @@ export default function DoublePageReader({
                 onNavigateNext();
               }}
             >
-              Naechstes Kapitel ({nextChapter}) &rarr;
+              Next chapter ({nextChapter}) &rarr;
             </button>
           ) : (
-            <p className={styles.endText}>Ende der Serie</p>
+            <p className={styles.endText}>End of series</p>
           )}
         </div>
       );
@@ -211,7 +211,7 @@ export default function DoublePageReader({
         <img
           key={pageIndex}
           src={imageProxyUrl(imageUrls[pageIndex])}
-          alt={`Seite ${pageIndex + 1}`}
+          alt={`Page ${pageIndex + 1}`}
           className={`${styles.singleImage} ${fitClass}`}
           draggable={false}
           referrerPolicy="no-referrer"
@@ -231,7 +231,7 @@ export default function DoublePageReader({
         <img
           key={leftIdx}
           src={imageProxyUrl(imageUrls[leftIdx])}
-          alt={`Seite ${leftIdx + 1}`}
+          alt={`Page ${leftIdx + 1}`}
           className={`${styles.singleImage} ${fitClass}`}
           draggable={false}
           referrerPolicy="no-referrer"
@@ -245,7 +245,7 @@ export default function DoublePageReader({
         <img
           key={`l-${leftIdx}`}
           src={imageProxyUrl(imageUrls[leftIdx])}
-          alt={`Seite ${leftIdx + 1}`}
+          alt={`Page ${leftIdx + 1}`}
           className={styles.spreadImage}
           draggable={false}
           referrerPolicy="no-referrer"
@@ -253,7 +253,7 @@ export default function DoublePageReader({
         <img
           key={`r-${rightIdx}`}
           src={imageProxyUrl(imageUrls[rightIdx])}
-          alt={`Seite ${rightIdx + 1}`}
+          alt={`Page ${rightIdx + 1}`}
           className={styles.spreadImage}
           draggable={false}
           referrerPolicy="no-referrer"

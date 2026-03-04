@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BookOpenCheck, CloudDownload, Play } from "lucide-react";
+import { BookOpenCheck, CloudDownload, Play } from "lucide-react";
 import { getChapters, getSeries } from "@/lib/manga-store";
 import { imageProxyUrl } from "@/lib/scraper";
 import { ChapterList } from "@/components/ChapterList";
@@ -12,6 +12,7 @@ import { useSyncContext } from "@/contexts/SyncContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 
 export default function SeriesPage() {
   const params = useParams();
@@ -32,9 +33,9 @@ export default function SeriesPage() {
   if (!series) {
     return (
       <div className="rounded-2xl border border-border bg-card p-6 text-center">
-        <p className="mb-4 text-sm text-muted-foreground">Serie nicht gefunden.</p>
+        <p className="mb-4 text-sm text-muted-foreground">Series not found.</p>
         <Link href="/">
-          <Button>Zur Bibliothek</Button>
+          <Button>Open Library</Button>
         </Link>
       </div>
     );
@@ -52,12 +53,7 @@ export default function SeriesPage() {
   return (
     <div key={refreshTick} className="space-y-4">
       <div className="flex items-center justify-between">
-        <Link href="/">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Zurueck
-          </Button>
-        </Link>
+        <ContextBackChevron />
         <DeleteSeriesButton seriesSlug={slug} seriesTitle={series.title} />
       </div>
 
@@ -81,29 +77,29 @@ export default function SeriesPage() {
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">
                   <BookOpenCheck className="mr-1 h-3.5 w-3.5" />
-                  {series.totalChapters || chapters.length} Kapitel
+                  {series.totalChapters || chapters.length} Chapters
                 </Badge>
                 <Badge variant="secondary">
                   <CloudDownload className="mr-1 h-3.5 w-3.5" />
-                  {syncedCount} bereit
+                  {syncedCount} ready
                 </Badge>
-                {isSyncing ? <Badge>Sync laeuft</Badge> : null}
+                {isSyncing ? <Badge>Sync in progress</Badge> : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 {continueChapter != null ? (
                   <Link href={`/read/${slug}/${continueChapter}`}>
                     <Button size="sm">
                       <Play className="mr-1 h-4 w-4" />
-                      Weiterlesen
+                      Continue Reading
                     </Button>
                   </Link>
                 ) : null}
                 <Button size="sm" variant="secondary">
-                  {isSyncing ? "Synchronisierung laeuft..." : "Kapitel synchronisieren"}
+                  {isSyncing ? "Syncing chapters..." : "Sync chapters"}
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Kapitelverwaltung und Lesefortschritt sind komplett lokal. Die Reader-Funktionalitaet bleibt unveraendert.
+                Chapter management and reading progress stay local. Reader behavior remains unchanged.
               </p>
             </div>
           </div>

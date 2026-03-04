@@ -159,7 +159,7 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
               <p className="text-xs text-muted-foreground">{SOURCE_LABELS[data.source]}</p>
             </div>
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Schliessen
+              Close
             </Button>
           </div>
         </div>
@@ -190,9 +190,9 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <Info label="Kapitel" value={loading || langLoading ? "..." : String(meta?.chapterCount ?? "-")} />
-                <Info label="Jahr" value={loading ? "..." : String(meta?.year ?? "-")} />
-                <Info label="Autor" value={loading ? "..." : (meta?.author || "-")} />
+                <Info label="Chapters" value={loading || langLoading ? "..." : String(meta?.chapterCount ?? "-")} />
+                <Info label="Year" value={loading ? "..." : String(meta?.year ?? "-")} />
+                <Info label="Author" value={loading ? "..." : (meta?.author || "-")} />
                 <Info label="Artist" value={loading ? "..." : (meta?.artist || "-")} />
               </div>
             </div>
@@ -200,7 +200,7 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
 
           {meta?.availableLanguages?.length ? (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sprachen</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Languages</p>
               <div className="flex flex-wrap gap-2">
                 {meta.availableLanguages.map((lang) => {
                   const active = lang === selectedLang;
@@ -237,11 +237,11 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
 
           {meta?.description ? (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Beschreibung</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</p>
               <p className="text-sm leading-6 text-foreground/90">{meta.description}</p>
             </div>
           ) : loading ? (
-            <p className="text-sm text-muted-foreground">Metadaten werden geladen...</p>
+            <p className="text-sm text-muted-foreground">Loading metadata...</p>
           ) : null}
         </div>
 
@@ -252,7 +252,7 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
             disabled={adding || langLoading}
             onClick={() => onAdd(isMangaDex ? selectedLang : undefined)}
           >
-            {adding ? "Wird hinzugefuegt..." : "Hinzufuegen"}
+            {adding ? "Adding..." : "Add Series"}
           </Button>
         </div>
       </motion.div>

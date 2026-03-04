@@ -67,18 +67,18 @@ test("theme toggle persists preference", async ({ page }) => {
 
 test("add route renders", async ({ page }) => {
   await page.goto("/add");
-  await expect(page.getByRole("heading", { name: /serie hinzufuegen/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /add series/i })).toBeVisible();
 });
 
 test("add page exposes search and url tabs", async ({ page }) => {
   await page.goto("/add");
-  await expect(page.getByRole("tab", { name: /suche/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /search/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /url/i })).toBeVisible();
 });
 
 test("stats route renders", async ({ page }) => {
   await page.goto("/stats");
-  await expect(page.getByRole("heading", { name: /lesestatistiken/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /reading stats/i })).toBeVisible();
 });
 
 test("series route renders", async ({ page }) => {
@@ -94,5 +94,5 @@ test("mobile nav marks active destination", async ({ page }) => {
 
 test("series page shows quick continue action", async ({ page }) => {
   await page.goto("/series/smoke-series");
-  await expect(page.getByRole("link", { name: /weiterlesen/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /continue reading/i })).toBeVisible();
 });

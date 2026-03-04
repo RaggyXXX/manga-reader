@@ -121,6 +121,18 @@ export default function Reader({
     }
   }, [nextChapter, onNavigate]);
 
+  const handleBack = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      window.location.assign("/");
+    },
+    [],
+  );
+
   /* ── Keyboard shortcuts ────────────────────────── */
 
   useReaderKeyboard({
@@ -217,17 +229,6 @@ export default function Reader({
         animate={{ opacity: barsVisible ? 1 : 0, y: barsVisible ? 0 : -8 }}
         transition={motionOrInstant(!!reduced, 0.2)}
       >
-        <button
-          className={styles.backBtn}
-          onClick={(e) => {
-            e.stopPropagation();
-            window.history.back();
-          }}
-          aria-label="Zurueck"
-        >
-          &#8592;
-        </button>
-
         <span
           className={styles.topTitle}
           onClick={(e) => {
@@ -243,12 +244,16 @@ export default function Reader({
             }
           }}
         >
-          Kap. {chapterNumber} &mdash; {title}
+          Ch. {chapterNumber} &mdash; {title}
         </span>
 
         <span className={styles.pageIndicator}>
           {currentPage + 1}/{imageUrls.length}
         </span>
+
+        <button className={styles.backBtn} onClick={handleBack} aria-label="Go back">
+          &#8250;
+        </button>
 
         <button
           className={styles.settingsBtn}
@@ -256,7 +261,7 @@ export default function Reader({
             e.stopPropagation();
             setSettingsOpen((v) => !v);
           }}
-          aria-label="Einstellungen"
+          aria-label="Settings"
         >
           &#9881;
         </button>
@@ -274,7 +279,7 @@ export default function Reader({
           disabled={prevChapter == null}
           onClick={goToPrev}
         >
-          &#8592; Vorher
+          &#8592; Previous
         </button>
 
         <span className={styles.chapterLabel}>
@@ -286,7 +291,7 @@ export default function Reader({
           disabled={nextChapter == null}
           onClick={goToNext}
         >
-          Naechstes &#8594;
+          Next &#8594;
         </button>
       </motion.div>
 

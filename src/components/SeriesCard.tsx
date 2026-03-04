@@ -64,7 +64,7 @@ export function SeriesCard({
         <div className="space-y-2 p-3">
           <div className="flex items-center justify-between">
             <Badge variant={readCount > 0 ? "default" : "muted"}>
-              {readCount > 0 ? `${readCount} / ${totalChapters} Kap.` : `${totalChapters} Kap.`}
+              {readCount > 0 ? `${readCount} / ${totalChapters} Ch.` : `${totalChapters} Ch.`}
             </Badge>
             <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
           </div>

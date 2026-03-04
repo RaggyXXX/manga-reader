@@ -45,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de" className={`${nunito.variable} ${nunitoSans.variable}`}>
+    <html lang="en" className={`${nunito.variable} ${nunitoSans.variable}`}>
       <body
         data-testid="app-shell"
         className="bg-background font-sans text-foreground antialiased"

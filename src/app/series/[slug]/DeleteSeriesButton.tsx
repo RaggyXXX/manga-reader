@@ -30,16 +30,15 @@ export function DeleteSeriesButton({ seriesSlug, seriesTitle }: Props) {
         onClick={() => setShowDialog(true)}
         type="button"
       >
-        Serie entfernen
+        Remove Series
       </button>
 
       {showDialog && (
         <div className={styles.dialogOverlay} onClick={() => setShowDialog(false)}>
           <div className={styles.dialogBox} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.dialogTitle}>Serie entfernen?</h3>
+            <h3 className={styles.dialogTitle}>Remove series?</h3>
             <p className={styles.dialogText}>
-              &laquo;{seriesTitle}&raquo; und alle zugehoerigen Kapitel werden
-              unwiderruflich geloescht.
+              &laquo;{seriesTitle}&raquo; and all related chapters will be permanently deleted.
             </p>
             <div className={styles.dialogActions}>
               <button
@@ -47,7 +46,7 @@ export function DeleteSeriesButton({ seriesSlug, seriesTitle }: Props) {
                 onClick={() => setShowDialog(false)}
                 type="button"
               >
-                Abbrechen
+                Cancel
               </button>
               <button
                 className={styles.dialogConfirm}
@@ -55,7 +54,7 @@ export function DeleteSeriesButton({ seriesSlug, seriesTitle }: Props) {
                 disabled={deleting}
                 type="button"
               >
-                {deleting ? "Loeschen..." : "Endgueltig loeschen"}
+                {deleting ? "Deleting..." : "Delete Permanently"}
               </button>
             </div>
           </div>
