@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import styles from "./page.module.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { LinkIcon, Search, Sparkles } from "lucide-react";
 import { discoverSeries, detectSource } from "@/lib/scraper";
-import { saveSeries, getAllSeries } from "@/lib/manga-store";
+import { getAllSeries, saveSeries, type MangaSource } from "@/lib/manga-store";
 import { SearchResultCard } from "@/components/SearchResultCard";
 import { PreviewModal } from "@/components/PreviewModal";
-import type { MangaSource } from "@/lib/manga-store";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SearchResult {
   title: string;
@@ -21,82 +25,79 @@ interface SearchResult {
 
 type Mode = "search" | "url";
 
-export default function AddSeriesPage() {
-  const [mode, setMode] = useState<Mode>("search");
-  const router = useRouter();
-
-  return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.backBtn} aria-label="Zurueck">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </Link>
-        <h1 className={styles.title}>Serie hinzufuegen</h1>
-      </header>
-
-      {/* Mode toggle */}
-      <div className={styles.modeToggle}>
-        <button
-          className={`${styles.modeBtn} ${mode === "search" ? styles.modeBtnActive : ""}`}
-          onClick={() => setMode("search")}
-          type="button"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          Suche
-        </button>
-        <button
-          className={`${styles.modeBtn} ${mode === "url" ? styles.modeBtnActive : ""}`}
-          onClick={() => setMode("url")}
-          type="button"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-          </svg>
-          URL eingeben
-        </button>
-      </div>
-
-      {mode === "search" ? <SearchMode router={router} /> : <UrlMode router={router} />}
-
-      {/* Supported sources */}
-      <div className={styles.sources}>
-        <h2 className={styles.sourcesTitle}>Unterstuetzte Quellen</h2>
-        <div className={styles.sourcesList}>
-          {[
-            { name: "MangaDex", domain: "mangadex.org", color: "#ff6740" },
-            { name: "MangaKatana", domain: "mangakatana.com", color: "#4a90d9" },
-            { name: "VyManga", domain: "vymanga.com", color: "#6bc95b" },
-            { name: "Manhwazone", domain: "manhwazone.to", color: "#e8a849" },
-          ].map((s) => (
-            <div key={s.name} className={styles.sourceItem}>
-              <span className={styles.sourceDot} style={{ background: s.color }} />
-              <div>
-                <span className={styles.sourceName}>{s.name}</span>
-                <span className={styles.sourceDomain}>{s.domain}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Search Mode ──
-
 const SOURCE_FILTERS: { key: MangaSource | "all"; label: string; color: string }[] = [
-  { key: "all", label: "Alle", color: "var(--accent)" },
+  { key: "all", label: "Alle", color: "#b57f44" },
   { key: "mangadex", label: "MangaDex", color: "#ff6740" },
   { key: "mangakatana", label: "MangaKatana", color: "#4a90d9" },
   { key: "vymanga", label: "VyManga", color: "#6bc95b" },
   { key: "manhwazone", label: "Manhwazone", color: "#e8a849" },
 ];
+
+const SOURCES = [
+  { name: "MangaDex", domain: "mangadex.org", color: "#ff6740" },
+  { name: "MangaKatana", domain: "mangakatana.com", color: "#4a90d9" },
+  { name: "VyManga", domain: "vymanga.com", color: "#6bc95b" },
+  { name: "Manhwazone", domain: "manhwazone.to", color: "#e8a849" },
+];
+
+export default function AddSeriesPage() {
+  const [mode, setMode] = useState<Mode>("search");
+  const router = useRouter();
+
+  return (
+    <div className="space-y-5">
+      <header className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Serie hinzufuegen</h1>
+          <p className="text-sm text-muted-foreground">Suche plattformuebergreifend oder fuege per URL hinzu.</p>
+        </div>
+        <Link href="/">
+          <Button variant="outline" size="sm">Zurueck</Button>
+        </Link>
+      </header>
+
+      <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-card p-1">
+        <button
+          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            mode === "search" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+          }`}
+          onClick={() => setMode("search")}
+          type="button"
+        >
+          <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Suche</span>
+        </button>
+        <button
+          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            mode === "url" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+          }`}
+          onClick={() => setMode("url")}
+          type="button"
+        >
+          <span className="inline-flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL</span>
+        </button>
+      </div>
+
+      {mode === "search" ? <SearchMode router={router} /> : <UrlMode router={router} />}
+
+      <Card>
+        <CardContent className="p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unterstuetzte Quellen</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {SOURCES.map((s) => (
+              <div key={s.name} className="flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+                <div>
+                  <p className="text-sm font-medium">{s.name}</p>
+                  <p className="text-xs text-muted-foreground">{s.domain}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [query, setQuery] = useState("");
@@ -112,7 +113,6 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSearch = useCallback(async (q: string) => {
-    // Abort previous request
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -122,9 +122,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     setPartialErrors([]);
 
     try {
-      const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
-        signal: controller.signal,
-      });
+      const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
       if (!resp.ok) throw new Error(`Search failed: ${resp.status}`);
       const data = await resp.json();
 
@@ -171,13 +169,16 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     };
   }, [query, doSearch]);
 
+  const filtered = useMemo(
+    () => (sourceFilter === "all" ? results : results.filter((r) => r.source === sourceFilter)),
+    [results, sourceFilter],
+  );
+
   const handleClickResult = (result: SearchResult) => {
-    // Check for duplicates
     const existing = getAllSeries();
-    const isDuplicate = existing.some((s) => s.sourceUrl === result.sourceUrl);
-    if (isDuplicate) {
-      const slug = existing.find((s) => s.sourceUrl === result.sourceUrl)!.slug;
-      router.push(`/series/${slug}`);
+    const duplicate = existing.find((s) => s.sourceUrl === result.sourceUrl);
+    if (duplicate) {
+      router.push(`/series/${duplicate.slug}`);
       return;
     }
     setPreview(result);
@@ -218,77 +219,74 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     }
   };
 
-  const filtered = sourceFilter === "all"
-    ? results
-    : results.filter((r) => r.source === sourceFilter);
-
   return (
     <>
-      {/* Search input */}
-      <div className={styles.form}>
-        <div className={styles.searchInputWrap}>
-          <svg className={styles.searchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Manga suchen..."
-            className={styles.searchInput}
-            autoFocus
-          />
-        </div>
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Manga suchen..."
+              className="pl-9"
+              autoFocus
+            />
+          </div>
 
-        {/* Source filter chips */}
-        <div className={styles.filterRow}>
-          {SOURCE_FILTERS.map((sf) => (
-            <button
-              key={sf.key}
-              type="button"
-              className={`${styles.filterChip} ${sourceFilter === sf.key ? styles.filterChipActive : ""}`}
-              style={sourceFilter === sf.key ? { borderColor: sf.color, background: `${sf.color}18` } : undefined}
-              onClick={() => setSourceFilter(sf.key)}
-            >
-              <span className={styles.filterDot} style={{ background: sf.color }} />
-              {sf.label}
-            </button>
-          ))}
-        </div>
+          <div className="flex flex-wrap gap-2">
+            {SOURCE_FILTERS.map((sf) => (
+              <button
+                key={sf.key}
+                type="button"
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  sourceFilter === sf.key
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setSourceFilter(sf.key)}
+              >
+                <span className="h-2 w-2 rounded-full" style={{ background: sf.color }} />
+                {sf.label}
+              </button>
+            ))}
+          </div>
 
-        {error && <p className={styles.error}>{error}</p>}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {partialErrors.length > 0 ? (
+            <p className="text-xs text-amber-700">Einige Quellen nicht erreichbar: {partialErrors.join(", ")}</p>
+          ) : null}
+        </CardContent>
+      </Card>
 
-        {partialErrors.length > 0 && (
-          <p className={styles.warning}>
-            Einige Quellen nicht erreichbar: {partialErrors.join(", ")}
-          </p>
-        )}
-      </div>
-
-      {/* Results */}
-      {searching && (
-        <div className={styles.resultsList}>
+      {searching ? (
+        <div className="grid gap-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className={styles.skeletonCard}>
-              <div className={styles.skeletonCover} />
-              <div className={styles.skeletonLines}>
-                <div className={styles.skeletonLine} />
-                <div className={styles.skeletonLine} />
-              </div>
-            </div>
+            <Card key={i}>
+              <CardContent className="flex items-center gap-3 p-3">
+                <Skeleton className="h-24 w-16 rounded-md" />
+                <div className="w-full space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
-      )}
+      ) : null}
 
-      {!searching && searched && filtered.length === 0 && !error && (
-        <div className={styles.noResults}>
-          <p className={styles.noResultsText}>Keine Ergebnisse gefunden</p>
-        </div>
-      )}
+      {!searching && searched && filtered.length === 0 && !error ? (
+        <Card>
+          <CardContent className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+            <Sparkles className="h-4 w-4" />
+            Keine Ergebnisse gefunden
+          </CardContent>
+        </Card>
+      ) : null}
 
-      {!searching && filtered.length > 0 && (
-        <div className={styles.resultsList}>
+      {!searching && filtered.length > 0 ? (
+        <div className="grid gap-3">
           {filtered.map((r, i) => (
             <SearchResultCard
               key={`${r.source}-${r.sourceUrl}-${i}`}
@@ -302,26 +300,23 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
             />
           ))}
         </div>
-      )}
+      ) : null}
 
-      {!searching && !searched && query.trim().length > 0 && query.trim().length < 2 && (
-        <p className={styles.minChars}>Mindestens 2 Zeichen eingeben</p>
-      )}
+      {!searching && !searched && query.trim().length > 0 && query.trim().length < 2 ? (
+        <p className="text-sm text-muted-foreground">Mindestens 2 Zeichen eingeben</p>
+      ) : null}
 
-      {/* Preview modal */}
-      {preview && (
+      {preview ? (
         <PreviewModal
           data={preview}
           onAdd={handleConfirmAdd}
           onClose={() => setPreview(null)}
           adding={addingUrl === preview.sourceUrl}
         />
-      )}
+      ) : null}
     </>
   );
 }
-
-// ── URL Mode ──
 
 function UrlMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [url, setUrl] = useState("");
@@ -372,39 +367,34 @@ function UrlMode({ router }: { router: ReturnType<typeof useRouter> }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.form}>
-      <label className={styles.label}>
-        Manga URL
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://mangadex.org/title/... oder manhwazone.to/series/..."
-          className={styles.input}
-          disabled={loading}
-          autoFocus
-        />
-      </label>
+    <Card>
+      <CardContent className="space-y-3 p-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Manga URL</label>
+            <Input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://mangadex.org/title/... oder manhwazone.to/series/..."
+              disabled={loading}
+              autoFocus
+            />
+          </div>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <Button type="submit" className="w-full" disabled={loading || !url.trim()}>
+            {loading ? "Serie wird geladen..." : "Serie entdecken"}
+          </Button>
+        </form>
 
-      {error && <p className={styles.error}>{error}</p>}
-
-      <button type="submit" className={styles.button} disabled={loading || !url.trim()}>
-        {loading ? (
-          <span className={styles.spinner}>
-            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M16 2C16 2 18 8 22 12C26 16 32 16 32 16C32 16 26 18 22 22C18 26 16 32 16 32C16 32 14 26 10 22C6 18 0 16 0 16C0 16 6 14 10 10C14 6 16 2 16 2Z"
-                fill="#f2a0b3"
-                opacity="0.9"
-              />
-            </svg>
-          </span>
-        ) : (
-          "Serie entdecken"
-        )}
-      </button>
-
-      {loading && <p className={styles.hint}>Serie wird geladen...</p>}
-    </form>
+        <div className="flex flex-wrap gap-2">
+          {SOURCES.map((source) => (
+            <Badge key={source.name} variant="outline" className="text-[11px]">
+              {source.name}
+            </Badge>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

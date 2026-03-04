@@ -1,6 +1,8 @@
 "use client";
 
-import styles from "./SearchResultCard.module.css";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { MangaSource } from "@/lib/manga-store";
 
 const SOURCE_COLORS: Record<MangaSource, string> = {
@@ -17,7 +19,6 @@ const SOURCE_LABELS: Record<MangaSource, string> = {
   manhwazone: "Manhwazone",
 };
 
-// Highlight these languages at the front
 const PRIORITY_LANGS = ["en", "de", "fr", "es", "ja", "ko"];
 
 interface SearchResultCardProps {
@@ -39,7 +40,6 @@ export function SearchResultCard({
   disabled,
   onClick,
 }: SearchResultCardProps) {
-  // Sort languages: priority first, then rest
   const sortedLangs = availableLanguages
     ? [...availableLanguages].sort((a, b) => {
         const ai = PRIORITY_LANGS.indexOf(a);
@@ -50,14 +50,17 @@ export function SearchResultCard({
         return a.localeCompare(b);
       })
     : [];
-  // MangaDex covers need proxying
-  const imgSrc = coverUrl && source === "mangadex"
-    ? `/api/mangadex/img?url=${encodeURIComponent(coverUrl)}`
-    : coverUrl;
+
+  const imgSrc =
+    coverUrl && source === "mangadex"
+      ? `/api/mangadex/img?url=${encodeURIComponent(coverUrl)}`
+      : coverUrl;
 
   return (
-    <button
-      className={`${styles.card} ${disabled ? styles.disabled : ""}`}
+    <motion.button
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+      className="group relative flex w-full items-start gap-3 overflow-hidden rounded-2xl border border-border/70 bg-card p-3 text-left shadow-sm transition-colors hover:bg-card/80 disabled:cursor-not-allowed disabled:opacity-60"
       onClick={onClick}
       disabled={disabled || loading}
       type="button"
@@ -66,49 +69,41 @@ export function SearchResultCard({
         <img
           src={imgSrc}
           alt={title}
-          className={styles.cover}
+          className="h-24 w-16 rounded-md object-cover"
           loading="lazy"
           referrerPolicy="no-referrer"
         />
       ) : (
-        <div className={styles.coverPlaceholder}>
+        <div className="flex h-24 w-16 items-center justify-center rounded-md bg-muted text-lg font-semibold text-muted-foreground">
           {title.charAt(0).toUpperCase()}
         </div>
       )}
 
-      <div className={styles.info}>
-        <span className={styles.title}>{title}</span>
-        <div className={styles.metaRow}>
-          <span className={styles.badge}>
-            <span className={styles.badgeDot} style={{ background: SOURCE_COLORS[source] }} />
-            <span className={styles.badgeName}>{SOURCE_LABELS[source]}</span>
-          </span>
-          {sortedLangs.length > 0 && (
-            <span className={styles.langBadges}>
-              {sortedLangs.slice(0, 5).map((lang) => (
-                <span key={lang} className={styles.langBadge}>{lang.toUpperCase()}</span>
-              ))}
-              {sortedLangs.length > 5 && (
-                <span className={styles.langMore}>+{sortedLangs.length - 5}</span>
-              )}
-            </span>
-          )}
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-sm font-semibold text-foreground">{title}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className="gap-1.5 border-border bg-background/60 text-xs">
+            <span className="h-2 w-2 rounded-full" style={{ background: SOURCE_COLORS[source] }} />
+            {SOURCE_LABELS[source]}
+          </Badge>
+          {sortedLangs.slice(0, 4).map((lang) => (
+            <Badge key={lang} variant="muted" className="text-[10px]">
+              {lang.toUpperCase()}
+            </Badge>
+          ))}
+          {sortedLangs.length > 4 ? (
+            <Badge variant="muted" className="text-[10px]">
+              +{sortedLangs.length - 4}
+            </Badge>
+          ) : null}
         </div>
       </div>
 
-      {loading && (
-        <div className={styles.loadingOverlay}>
-          <span className={styles.loadingSpinner}>
-            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M16 2C16 2 18 8 22 12C26 16 32 16 32 16C32 16 26 18 22 22C18 26 16 32 16 32C16 32 14 26 10 22C6 18 0 16 0 16C0 16 6 14 10 10C14 6 16 2 16 2Z"
-                fill="#f2a0b3"
-                opacity="0.9"
-              />
-            </svg>
-          </span>
+      {loading ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
         </div>
-      )}
-    </button>
+      ) : null}
+    </motion.button>
   );
 }
