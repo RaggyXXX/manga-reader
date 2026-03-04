@@ -5,7 +5,7 @@ export const runtime = "edge";
 
 const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
 
-const FETCH_TIMEOUT = 10000;
+const FETCH_TIMEOUT = 8000;
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -109,7 +109,7 @@ const ALLORIGINS_MIRRORS = [
  */
 async function fetchHtmlWithRetry(url: string): Promise<{ html: string | null; diagnostics: DiagEntry[] }> {
   const diagnostics: DiagEntry[] = [];
-  const MAX_ATTEMPTS = 3;
+  const MAX_ATTEMPTS = 2;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     if (attempt > 1) await delay(2000);
