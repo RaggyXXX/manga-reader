@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { BookOpenCheck, CloudDownload, Heart, Loader2, Play, Share2, Square } from "lucide-react";
+import { BookOpenCheck, CloudDownload, Heart, Loader2, Play, Share2 } from "lucide-react";
 import {
   getChapters,
   getSeries,
@@ -144,48 +144,24 @@ export default function SeriesPage() {
   };
 
   // Determine bottom button state
-  const getSyncButtonContent = () => {
+  const getButtonState = () => {
     if (isSyncing) {
       const progress = total > 0 ? `${completed}/${total}` : "...";
-      return {
-        label: `Syncing... ${progress}`,
-        icon: <Loader2 className="mr-2 h-4 w-4 animate-spin" />,
-        suffix: <span className="ml-2 text-xs opacity-70">Stop</span>,
-        disabled: false,
-        variant: "default" as const,
-      };
+      return { label: `Syncing... ${progress}`, icon: <Loader2 className="mr-2 h-5 w-5 animate-spin" />, suffix: <span className="ml-2 text-xs opacity-80">Tap to stop</span>, disabled: false, enabled: true };
     }
     if (!hasChaptersSynced) {
-      return {
-        label: "Download for offline",
-        icon: <CloudDownload className="mr-2 h-4 w-4" />,
-        suffix: null,
-        disabled: false,
-        variant: "default" as const,
-      };
+      return { label: "Download all", icon: <CloudDownload className="mr-2 h-5 w-5" />, suffix: null, disabled: false, enabled: true };
     }
     if (newCount > 0) {
-      return {
-        label: "Update for offline",
-        icon: <CloudDownload className="mr-2 h-4 w-4" />,
-        suffix: <Badge variant="secondary" className="ml-2 text-[10px]">+{newCount} new</Badge>,
-        disabled: false,
-        variant: "default" as const,
-      };
+      return { label: "Update", icon: <CloudDownload className="mr-2 h-5 w-5" />, suffix: <span className="ml-2 rounded bg-white/20 px-1.5 py-0.5 text-[11px] font-bold">+{newCount} new</span>, disabled: false, enabled: true };
     }
-    return {
-      label: "Update for offline",
-      icon: <CloudDownload className="mr-2 h-4 w-4" />,
-      suffix: checking ? <Loader2 className="ml-2 h-3 w-3 animate-spin" /> : null,
-      disabled: !checking && isFullySynced,
-      variant: "outline" as const,
-    };
+    return { label: "No updates", icon: <CloudDownload className="mr-2 h-5 w-5" />, suffix: checking ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null, disabled: true, enabled: false };
   };
 
-  const btn = getSyncButtonContent();
+  const btn = getButtonState();
 
   return (
-    <div className="space-y-4 pb-20 md:pb-4">
+    <div className="space-y-4 pb-28 md:pb-4">
       <div className="flex items-center justify-between">
         <ContextBackChevron className="shrink-0" />
         <DeleteSeriesButton seriesSlug={slug} seriesTitle={series.title} />
@@ -263,20 +239,29 @@ export default function SeriesPage() {
 
       <ChapterList key={slug} chapters={chaptersPlain} seriesSlug={slug} />
 
-      {/* Fixed bottom sync button */}
-      <div className="fixed inset-x-0 bottom-[4.5rem] z-30 px-4 pb-2 md:static md:px-0 md:pb-0">
-        <Button
-          className="w-full shadow-lg md:shadow-none"
-          variant={btn.variant}
-          size="lg"
+      {/* Fixed bottom sync bar — flush above mobile nav, same full width */}
+      <div
+        className={`fixed inset-x-0 bottom-[49px] z-40 border-t md:relative md:bottom-auto md:mt-4 md:rounded-xl md:border-t-0 ${
+          btn.enabled
+            ? "border-primary/30 bg-primary text-primary-foreground"
+            : "border-border/40 bg-muted/80 text-muted-foreground"
+        }`}
+        data-tour="series-sync"
+      >
+        <button
+          type="button"
           disabled={btn.disabled}
           onClick={handleSyncClick}
-          data-tour="series-sync"
+          className={`flex w-full items-center justify-center px-3 py-3.5 text-sm font-semibold transition-colors md:rounded-xl ${
+            btn.enabled
+              ? "hover:bg-primary/90 active:bg-primary/80"
+              : "cursor-not-allowed opacity-60"
+          }`}
         >
           {btn.icon}
           {btn.label}
           {btn.suffix}
-        </Button>
+        </button>
       </div>
     </div>
   );

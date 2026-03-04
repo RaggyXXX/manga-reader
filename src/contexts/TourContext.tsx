@@ -145,11 +145,11 @@ function buildTourPhases(): TourPhase[] {
       {
         element: '[data-tour="series-sync"]',
         popover: {
-          title: "Sync Chapters",
+          title: "Download & Update",
           description:
-            "Download chapter data for offline reading. Syncs run in the background.",
-          side: "bottom",
-          align: "start",
+            'Tap "Download all" to save chapters for offline reading. When new chapters are available, the button changes to "Update". Syncs run in the background.',
+          side: "top",
+          align: "center",
         },
       },
       {
