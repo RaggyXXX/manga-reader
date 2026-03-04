@@ -59,6 +59,9 @@ function injectDemoManga() {
     3: { number: 3, title: "Chapter 3: Reading", url: "", imageUrls: [], syncedAt: null },
   };
   localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
+
+  // Notify components to refresh their state from localStorage
+  window.dispatchEvent(new Event("tour-storage-updated"));
 }
 
 function removeDemoManga() {
@@ -69,6 +72,9 @@ function removeDemoManga() {
   const chaptersMap = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || "{}");
   delete chaptersMap[DEMO_SLUG];
   localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
+
+  // Notify components to refresh their state from localStorage
+  window.dispatchEvent(new Event("tour-storage-updated"));
 }
 
 // --- Tour phase definitions ---

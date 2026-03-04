@@ -134,6 +134,13 @@ export default function LibraryPage() {
     return path;
   }, [currentFolderId, folderTree]);
 
+  // Refresh when tour injects/removes demo manga
+  useEffect(() => {
+    const handler = () => refreshSeries();
+    window.addEventListener("tour-storage-updated", handler);
+    return () => window.removeEventListener("tour-storage-updated", handler);
+  }, [refreshSeries]);
+
   useEffect(() => {
     if (searchOpen && searchInputRef.current) {
       searchInputRef.current.focus();
