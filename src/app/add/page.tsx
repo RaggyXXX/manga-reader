@@ -7,6 +7,7 @@ import Link from "next/link";
 import { discoverSeries, detectSource } from "@/lib/scraper";
 import { saveSeries, getAllSeries } from "@/lib/manga-store";
 import { SearchResultCard } from "@/components/SearchResultCard";
+import { PreviewModal } from "@/components/PreviewModal";
 import type { MangaSource } from "@/lib/manga-store";
 
 interface SearchResult {
@@ -105,6 +106,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [addingUrl, setAddingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<MangaSource | "all">("all");
+  const [preview, setPreview] = useState<SearchResult | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -168,7 +170,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     };
   }, [query, doSearch]);
 
-  const handleAddResult = async (result: SearchResult) => {
+  const handleClickResult = (result: SearchResult) => {
     // Check for duplicates
     const existing = getAllSeries();
     const isDuplicate = existing.some((s) => s.sourceUrl === result.sourceUrl);
@@ -177,12 +179,17 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
       router.push(`/series/${slug}`);
       return;
     }
+    setPreview(result);
+  };
 
-    setAddingUrl(result.sourceUrl);
+  const handleConfirmAdd = async () => {
+    if (!preview) return;
+
+    setAddingUrl(preview.sourceUrl);
     setError(null);
 
     try {
-      const discovered = await discoverSeries(result.sourceUrl);
+      const discovered = await discoverSeries(preview.sourceUrl);
       const slug = discovered.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -203,6 +210,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(`Fehler beim Laden der Serie: ${msg}`);
+      setPreview(null);
     } finally {
       setAddingUrl(null);
     }
@@ -287,7 +295,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
               source={r.source}
               loading={addingUrl === r.sourceUrl}
               disabled={addingUrl !== null}
-              onClick={() => handleAddResult(r)}
+              onClick={() => handleClickResult(r)}
             />
           ))}
         </div>
@@ -295,6 +303,16 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
 
       {!searching && !searched && query.trim().length > 0 && query.trim().length < 2 && (
         <p className={styles.minChars}>Mindestens 2 Zeichen eingeben</p>
+      )}
+
+      {/* Preview modal */}
+      {preview && (
+        <PreviewModal
+          data={preview}
+          onAdd={handleConfirmAdd}
+          onClose={() => setPreview(null)}
+          adding={addingUrl === preview.sourceUrl}
+        />
       )}
     </>
   );
