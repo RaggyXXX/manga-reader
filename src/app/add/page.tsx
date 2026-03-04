@@ -252,12 +252,12 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sources</p>
-            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
               {SOURCE_FILTERS.map((sf) => (
                 <button
                   key={sf.key}
                   type="button"
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     sourceFilter === sf.key
                       ? "border-primary/50 bg-primary/10 text-primary"
                       : "border-border bg-background text-muted-foreground hover:text-foreground"
