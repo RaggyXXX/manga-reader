@@ -16,6 +16,7 @@ interface SearchResult {
   sourceUrl: string;
   source: MangaSource;
   sourceId?: string;
+  availableLanguages?: string[];
 }
 
 type Mode = "search" | "url";
@@ -293,6 +294,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
               title={r.title}
               coverUrl={r.coverUrl}
               source={r.source}
+              availableLanguages={r.availableLanguages}
               loading={addingUrl === r.sourceUrl}
               disabled={addingUrl !== null}
               onClick={() => handleClickResult(r)}

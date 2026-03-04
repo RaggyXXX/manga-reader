@@ -70,12 +70,21 @@
   overflow: hidden;
 }
 
+/* ── Meta row (badge + languages) ── */
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* ── Source badge ── */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   width: fit-content;
+  flex-shrink: 0;
 }
 
 .badgeDot {
@@ -90,6 +99,33 @@
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.02em;
+}
+
+/* ── Language badges ── */
+.langBadges {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.langBadge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 1px 5px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+}
+
+.langMore {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 1px 4px;
 }
 
 /* ── Loading overlay ── */

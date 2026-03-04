@@ -17,10 +17,14 @@ const SOURCE_LABELS: Record<MangaSource, string> = {
   manhwazone: "Manhwazone",
 };
 
+// Highlight these languages at the front
+const PRIORITY_LANGS = ["en", "de", "fr", "es", "ja", "ko"];
+
 interface SearchResultCardProps {
   title: string;
   coverUrl: string;
   source: MangaSource;
+  availableLanguages?: string[];
   loading?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -30,10 +34,22 @@ export function SearchResultCard({
   title,
   coverUrl,
   source,
+  availableLanguages,
   loading,
   disabled,
   onClick,
 }: SearchResultCardProps) {
+  // Sort languages: priority first, then rest
+  const sortedLangs = availableLanguages
+    ? [...availableLanguages].sort((a, b) => {
+        const ai = PRIORITY_LANGS.indexOf(a);
+        const bi = PRIORITY_LANGS.indexOf(b);
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        if (ai !== -1) return -1;
+        if (bi !== -1) return 1;
+        return a.localeCompare(b);
+      })
+    : [];
   // MangaDex covers need proxying
   const imgSrc = coverUrl && source === "mangadex"
     ? `/api/mangadex/img?url=${encodeURIComponent(coverUrl)}`
@@ -62,10 +78,22 @@ export function SearchResultCard({
 
       <div className={styles.info}>
         <span className={styles.title}>{title}</span>
-        <span className={styles.badge}>
-          <span className={styles.badgeDot} style={{ background: SOURCE_COLORS[source] }} />
-          <span className={styles.badgeName}>{SOURCE_LABELS[source]}</span>
-        </span>
+        <div className={styles.metaRow}>
+          <span className={styles.badge}>
+            <span className={styles.badgeDot} style={{ background: SOURCE_COLORS[source] }} />
+            <span className={styles.badgeName}>{SOURCE_LABELS[source]}</span>
+          </span>
+          {sortedLangs.length > 0 && (
+            <span className={styles.langBadges}>
+              {sortedLangs.slice(0, 5).map((lang) => (
+                <span key={lang} className={styles.langBadge}>{lang.toUpperCase()}</span>
+              ))}
+              {sortedLangs.length > 5 && (
+                <span className={styles.langMore}>+{sortedLangs.length - 5}</span>
+              )}
+            </span>
+          )}
+        </div>
       </div>
 
       {loading && (

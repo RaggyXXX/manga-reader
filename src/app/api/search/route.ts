@@ -9,6 +9,7 @@ export interface SearchResult {
   sourceUrl: string;
   source: "mangadex" | "mangakatana" | "vymanga" | "manhwazone";
   sourceId?: string;
+  availableLanguages?: string[];
 }
 
 interface SearchError {
@@ -59,6 +60,7 @@ async function searchMangaDex(q: string): Promise<SearchResult[]> {
       sourceUrl: `https://mangadex.org/title/${id}`,
       source: "mangadex" as const,
       sourceId: id,
+      availableLanguages: (attrs.availableTranslatedLanguages as string[]) || [],
     };
   });
 }
@@ -91,6 +93,7 @@ async function searchMangaKatana(q: string): Promise<SearchResult[]> {
         coverUrl,
         sourceUrl: titleMatch[1].startsWith("http") ? titleMatch[1] : `https://mangakatana.com${titleMatch[1]}`,
         source: "mangakatana",
+        availableLanguages: ["en"],
       });
     }
   }
@@ -127,6 +130,7 @@ async function searchVyManga(q: string): Promise<SearchResult[]> {
         coverUrl: imgMatch?.[1] || "",
         sourceUrl: `https://vymanga.com${linkMatch[1]}`,
         source: "vymanga",
+        availableLanguages: ["en"],
       });
     }
   }
@@ -167,6 +171,7 @@ async function searchManhwazone(q: string): Promise<SearchResult[]> {
         coverUrl: imgMatch?.[1] || "",
         sourceUrl: `https://manhwazone.to${linkMatch[1]}`,
         source: "manhwazone",
+        availableLanguages: ["en"],
       });
     }
   }
