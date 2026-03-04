@@ -5,6 +5,7 @@ import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { ToastProvider } from "@/components/Toast";
 import { SyncProvider } from "@/contexts/SyncContext";
 import { SyncProgressBar } from "@/components/SyncProgressBar";
+import { AppShell } from "@/components/layout/AppShell";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -45,11 +46,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de" className={`${nunito.variable} ${nunitoSans.variable}`}>
-      <body style={{ fontFamily: "var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+      <body
+        data-testid="app-shell"
+        className="bg-background font-sans text-foreground antialiased"
+        style={{ fontFamily: "var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
+      >
         <SyncProvider>
           <SyncProgressBar />
           <ToastProvider>
-            {children}
+            <AppShell>{children}</AppShell>
           </ToastProvider>
         </SyncProvider>
         <ServiceWorkerRegistrar />

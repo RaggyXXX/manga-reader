@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import styles from "./Reader.module.css";
 import { getReaderSettings, saveReaderSettings } from "@/lib/reader-settings";
 import { markChapterRead } from "@/lib/reading-progress";
@@ -13,6 +14,7 @@ import VerticalReader from "./VerticalReader";
 import PageReader from "./PageReader";
 import RtlReader from "./RtlReader";
 import DoublePageReader from "./DoublePageReader";
+import { motionOrInstant } from "@/lib/motion";
 
 /* ── Background colour map ─────────────────────────── */
 
@@ -58,6 +60,7 @@ export default function Reader({
   allChapterNums,
   onNavigate,
 }: ReaderProps) {
+  const reduced = useReducedMotion();
   /* ── State ─────────────────────────────────────── */
 
   const [settings, setSettings] = useState<ReaderSettings>(getReaderSettings);
@@ -208,8 +211,11 @@ export default function Reader({
       />
 
       {/* Top bar */}
-      <div
+      <motion.div
         className={`${styles.topBar} ${barsVisible ? "" : styles.hidden}`}
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: barsVisible ? 1 : 0, y: barsVisible ? 0 : -8 }}
+        transition={motionOrInstant(!!reduced, 0.2)}
       >
         <button
           className={styles.backBtn}
@@ -254,11 +260,14 @@ export default function Reader({
         >
           &#9881;
         </button>
-      </div>
+      </motion.div>
 
       {/* Bottom bar */}
-      <div
+      <motion.div
         className={`${styles.bottomBar} ${barsVisible ? "" : styles.hidden}`}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: barsVisible ? 1 : 0, y: barsVisible ? 0 : 8 }}
+        transition={motionOrInstant(!!reduced, 0.2)}
       >
         <button
           className={styles.navBtn}
@@ -279,7 +288,7 @@ export default function Reader({
         >
           Naechstes &#8594;
         </button>
-      </div>
+      </motion.div>
 
       {/* Chapter slider overlay */}
       <ChapterSlider

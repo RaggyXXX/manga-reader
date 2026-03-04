@@ -1,62 +1,46 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { getSeries, getChapters, type StoredSeries, type StoredChapter } from "@/lib/manga-store";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { ArrowLeft, BookOpenCheck, CloudDownload } from "lucide-react";
+import { getChapters, getSeries } from "@/lib/manga-store";
 import { imageProxyUrl } from "@/lib/scraper";
 import { ChapterList } from "@/components/ChapterList";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
 import { useSyncContext } from "@/contexts/SyncContext";
-import styles from "./page.module.css";
-import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function SeriesPage() {
   const params = useParams();
-  const router = useRouter();
   const slug = params.slug as string;
   const { phase, slug: syncSlug } = useSyncContext();
-
-  const [series, setSeries] = useState<StoredSeries | null>(null);
-  const [chapters, setChapters] = useState<StoredChapter[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
   const isSyncing = phase !== "idle" && syncSlug === slug;
+  const [refreshTick, setRefreshTick] = useState(0);
 
-  const refreshData = useCallback(() => {
-    const s = getSeries(slug);
-    if (!s) {
-      router.push("/");
-      return;
-    }
-    setSeries(s);
-    setChapters(getChapters(slug));
-    setLoaded(true);
-  }, [slug, router]);
-
-  // Initial load
-  useEffect(() => {
-    refreshData();
-  }, [refreshData]);
-
-  // Poll localStorage every 2s while syncing this series
   useEffect(() => {
     if (!isSyncing) return;
-    const id = setInterval(refreshData, 2000);
+    const id = setInterval(() => setRefreshTick((v) => v + 1), 2000);
     return () => clearInterval(id);
-  }, [isSyncing, refreshData]);
+  }, [isSyncing]);
 
-  // Final refresh when sync ends
-  const prevSyncing = usePrevious(isSyncing);
-  useEffect(() => {
-    if (prevSyncing && !isSyncing) {
-      refreshData();
-    }
-  }, [isSyncing, prevSyncing, refreshData]);
+  const series = getSeries(slug);
+  const chapters = getChapters(slug);
 
-  if (!loaded || !series) return null;
+  if (!series) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6 text-center">
+        <p className="mb-4 text-sm text-muted-foreground">Serie nicht gefunden.</p>
+        <Link href="/">
+          <Button>Zur Bibliothek</Button>
+        </Link>
+      </div>
+    );
+  }
 
   const syncedCount = chapters.filter((ch) => ch.imageUrls.length > 0).length;
-
   const chaptersPlain = chapters.map((ch) => ({
     number: ch.number,
     title: ch.title,
@@ -65,58 +49,54 @@ export default function SeriesPage() {
   }));
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.backBtn} aria-label="Zurueck">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
+    <div key={refreshTick} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Link href="/">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Zurueck
+          </Button>
         </Link>
-        <h1 className={styles.headerTitle}>{series.title}</h1>
-      </header>
-
-      <div className={styles.infoCard}>
-        {series.coverUrl ? (
-          <img
-            src={imageProxyUrl(series.coverUrl, series.source)}
-            alt={series.title}
-            className={styles.cover}
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <div className={styles.coverPlaceholder}>&#9744;</div>
-        )}
-
-        <div className={styles.details}>
-          <h2 className={styles.seriesTitle}>{series.title}</h2>
-          <div className={styles.badges}>
-            <span className={styles.badge}>
-              {series.totalChapters || chapters.length} Kapitel
-            </span>
-            <span className={`${styles.badge} ${styles.badgeCrawled}`}>
-              {syncedCount} bereit
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.dangerZone}>
         <DeleteSeriesButton seriesSlug={slug} seriesTitle={series.title} />
       </div>
 
-      <ChapterList
-        chapters={chaptersPlain}
-        seriesSlug={slug}
-      />
+      <Card className="overflow-hidden">
+        <CardContent className="p-0 sm:p-0">
+          <div className="grid gap-4 p-4 sm:grid-cols-[180px_1fr]">
+            <div className="overflow-hidden rounded-xl border border-border bg-muted/40">
+              {series.coverUrl ? (
+                <img
+                  src={imageProxyUrl(series.coverUrl, series.source)}
+                  alt={series.title}
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex min-h-[240px] items-center justify-center text-4xl text-muted-foreground">□</div>
+              )}
+            </div>
+            <div className="space-y-3">
+              <h1 className="text-2xl font-bold tracking-tight">{series.title}</h1>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">
+                  <BookOpenCheck className="mr-1 h-3.5 w-3.5" />
+                  {series.totalChapters || chapters.length} Kapitel
+                </Badge>
+                <Badge variant="secondary">
+                  <CloudDownload className="mr-1 h-3.5 w-3.5" />
+                  {syncedCount} bereit
+                </Badge>
+                {isSyncing ? <Badge>Sync laeuft</Badge> : null}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Kapitelverwaltung und Lesefortschritt sind komplett lokal. Die Reader-Funktionalitaet bleibt unveraendert.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ChapterList key={slug} chapters={chaptersPlain} seriesSlug={slug} />
     </div>
   );
-}
-
-// Small hook to track previous value
-function usePrevious<T>(value: T): T | undefined {
-  const [prev, setPrev] = useState<{ current: T | undefined }>({ current: undefined });
-  useEffect(() => {
-    setPrev({ current: value });
-  }, [value]);
-  return prev.current;
 }
