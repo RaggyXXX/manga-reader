@@ -30,6 +30,7 @@ import {
 import { getProgress } from "@/lib/reading-progress";
 import { SeriesCard } from "@/components/SeriesCard";
 import { ContinueReading } from "@/components/ContinueReading";
+import { QuickContinue } from "@/components/QuickContinue";
 import { StatusSelector } from "@/components/StatusSelector";
 import { BatchActionBar } from "@/components/BatchActionBar";
 import { Button } from "@/components/ui/button";
@@ -230,15 +231,18 @@ export default function LibraryPage() {
       )}
 
       {!isEmpty && (
-        <ContinueReading
-          series={series.map((s) => ({
-            slug: s.slug,
-            title: s.title,
-            coverUrl: s.coverUrl || "",
-            totalChapters: s.totalChapters,
-            source: s.source,
-          }))}
-        />
+        <>
+          <QuickContinue series={series} />
+          <ContinueReading
+            series={series.map((s) => ({
+              slug: s.slug,
+              title: s.title,
+              coverUrl: s.coverUrl || "",
+              totalChapters: s.totalChapters,
+              source: s.source,
+            }))}
+          />
+        </>
       )}
 
       {isEmpty ? (

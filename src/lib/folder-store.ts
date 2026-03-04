@@ -45,7 +45,7 @@ export function getFolderDepth(tree: FolderTree, folderId: string): number {
   let depth = 0;
   let currentId: string | null = folderId;
   while (currentId) {
-    const folder = tree.folders[currentId];
+    const folder: Folder | undefined = tree.folders[currentId];
     if (!folder || !folder.parentId) break;
     depth++;
     currentId = folder.parentId;
