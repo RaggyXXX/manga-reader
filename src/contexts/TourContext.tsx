@@ -17,6 +17,8 @@ const TOUR_DONE_KEY = "tour-completed";
 const DEMO_SLUG = "demo-tutorial-manga";
 const SERIES_KEY = "manga-series";
 const CHAPTERS_KEY = "manga-chapters";
+const PROGRESS_KEY = "manga-reader-progress";
+const BOOKMARKS_KEY = "manga-bookmarks";
 
 type TourMode = "short" | "long";
 
@@ -60,6 +62,44 @@ function injectDemoManga() {
   };
   localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
 
+  // Inject demo reading progress so stats page shows metrics
+  const now = Date.now();
+  const progressMap = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}");
+  if (!progressMap[DEMO_SLUG]) {
+    progressMap[DEMO_SLUG] = {
+      lastReadChapter: 2,
+      readChapters: [1, 2],
+      chapterProgress: {
+        1: { scrollPercent: 100, imageIndex: 12, timestamp: now - 3600000 },
+        2: { scrollPercent: 45, imageIndex: 5, timestamp: now - 600000 },
+      },
+    };
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progressMap));
+  }
+
+  // Inject demo bookmarks so bookmarks page shows content
+  const bookmarksMap = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || "{}");
+  if (!bookmarksMap[DEMO_SLUG]) {
+    bookmarksMap[DEMO_SLUG] = [
+      {
+        id: "demo-bookmark-1",
+        slug: DEMO_SLUG,
+        chapterNumber: 1,
+        imageIndex: 3,
+        note: "Cool panel!",
+        createdAt: now - 1800000,
+      },
+      {
+        id: "demo-bookmark-2",
+        slug: DEMO_SLUG,
+        chapterNumber: 2,
+        imageIndex: 0,
+        createdAt: now - 300000,
+      },
+    ];
+    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarksMap));
+  }
+
   // Notify components to refresh their state from localStorage
   window.dispatchEvent(new Event("tour-storage-updated"));
 }
@@ -72,6 +112,16 @@ function removeDemoManga() {
   const chaptersMap = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || "{}");
   delete chaptersMap[DEMO_SLUG];
   localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
+
+  // Remove demo reading progress
+  const progressMap = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}");
+  delete progressMap[DEMO_SLUG];
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(progressMap));
+
+  // Remove demo bookmarks
+  const bookmarksMap = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || "{}");
+  delete bookmarksMap[DEMO_SLUG];
+  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarksMap));
 
   // Notify components to refresh their state from localStorage
   window.dispatchEvent(new Event("tour-storage-updated"));
@@ -329,9 +379,12 @@ function buildLongTourPhases(hasRealLibrary: boolean): TourPhase[] {
     path: "/bookmarks",
     steps: [
       {
+        element: '[data-tour="bookmarks-grid"]',
         popover: {
           title: "Bookmarks",
           description: "Your saved pages appear here as thumbnails. Long-press any page while reading to bookmark it.",
+          side: "bottom",
+          align: "center",
         },
       },
     ],
@@ -342,9 +395,12 @@ function buildLongTourPhases(hasRealLibrary: boolean): TourPhase[] {
     path: "/stats",
     steps: [
       {
+        element: '[data-tour="stats-metrics"]',
         popover: {
           title: "Reading Metrics",
-          description: "Track chapters read, pages viewed, and estimated reading time. Your stats will appear here as you read.",
+          description: "Track chapters read, pages viewed, and estimated reading time.",
+          side: "bottom",
+          align: "center",
         },
       },
       {
