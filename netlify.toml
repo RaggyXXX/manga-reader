@@ -10,3 +10,10 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
     Content-Type = "application/javascript; charset=utf-8"
+
+# CDN-level proxy to manhwazone.to (bypasses Cloudflare challenge at CDN layer)
+[[redirects]]
+  from = "/mw-proxy/*"
+  to = "https://manhwazone.to/:splat"
+  status = 200
+  force = true
