@@ -1,6 +1,6 @@
 "use client";
 
-import styles from "./Skeleton.module.css";
+import { Skeleton as BaseSkeleton } from "@/components/ui/skeleton";
 
 interface SkeletonProps {
   width?: string | number;
@@ -9,15 +9,10 @@ interface SkeletonProps {
   className?: string;
 }
 
-export function Skeleton({
-  width,
-  height,
-  borderRadius,
-  className,
-}: SkeletonProps) {
+export function Skeleton({ width, height, borderRadius, className }: SkeletonProps) {
   return (
-    <div
-      className={`${styles.skeleton}${className ? ` ${className}` : ""}`}
+    <BaseSkeleton
+      className={className}
       style={{
         width,
         height,
