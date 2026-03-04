@@ -249,7 +249,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
                 title: "Sync Chapters",
                 description:
                   "Download chapter data for offline reading. Syncs run in the background.",
-                side: "top",
+                side: "bottom",
                 align: "start",
               },
             },
@@ -259,8 +259,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
                 title: "Share & Favorite",
                 description:
                   "Share this series with friends or mark it as a favorite for quick access.",
-                side: "left",
-                align: "start",
+                side: "bottom",
+                align: "end",
               },
             },
           ],
