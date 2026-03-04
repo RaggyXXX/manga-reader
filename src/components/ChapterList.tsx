@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import styles from "./ChapterList.module.css";
+import { useCallback, useMemo, useState } from "react";
+import { ArrowDownUp, Search } from "lucide-react";
 import {
+  clearSeriesProgress,
   getReadChapters,
   markAllChaptersRead,
-  clearSeriesProgress,
 } from "@/lib/reading-progress";
 import { useSyncContext } from "@/contexts/SyncContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ChapterItem {
   number: number;
@@ -23,18 +27,14 @@ interface Props {
 }
 
 export function ChapterList({ chapters, seriesSlug }: Props) {
-  const [readChapters, setReadChapters] = useState<Set<number>>(new Set());
+  const [readChapters, setReadChapters] = useState<Set<number>>(
+    () => new Set(getReadChapters(seriesSlug)),
+  );
   const [search, setSearch] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const { phase, slug: syncSlug, startSync, stopSync } = useSyncContext();
-
   const isSyncing = phase !== "idle" && phase !== "error" && syncSlug === seriesSlug;
 
-  useEffect(() => {
-    setReadChapters(new Set(getReadChapters(seriesSlug)));
-  }, [seriesSlug]);
-
-  /* ── Sync handler ── */
   const handleSync = useCallback(() => {
     startSync(seriesSlug);
   }, [seriesSlug, startSync]);
@@ -43,7 +43,6 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
     stopSync();
   }, [stopSync]);
 
-  /* ── Mark all / clear all ── */
   const handleMarkAllRead = useCallback(() => {
     const allNumbers = chapters.map((ch) => ch.number);
     markAllChaptersRead(seriesSlug, allNumbers);
@@ -55,173 +54,102 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
     setReadChapters(new Set());
   }, [seriesSlug]);
 
-  /* ── Filtered + sorted chapters ── */
   const filteredChapters = useMemo(() => {
     const q = search.trim().toLowerCase();
     let result = chapters;
 
     if (q) {
       result = chapters.filter(
-        (ch) =>
-          String(ch.number).includes(q) ||
-          ch.title.toLowerCase().includes(q)
+        (ch) => String(ch.number).includes(q) || ch.title.toLowerCase().includes(q),
       );
     }
 
     return sortAsc ? result : [...result].reverse();
   }, [chapters, search, sortAsc]);
 
-  const pendingCount = chapters.filter(
-    (ch) => ch.status === "pending"
-  ).length;
+  const pendingCount = chapters.filter((ch) => ch.status === "pending").length;
 
   return (
-    <div className={styles.container}>
-      {/* Toolbar: search + sort + bulk actions */}
-      <div className={styles.toolbar}>
-        <div className={styles.searchRow}>
-          <div className={styles.searchWrap}>
-            <span className={styles.searchIcon}>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              className={styles.searchInput}
-              placeholder="Kapitel suchen..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+    <Card>
+      <CardContent className="space-y-4 p-4">
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Kapitel suchen..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Button variant="outline" size="icon" onClick={() => setSortAsc((prev) => !prev)} title="Sortierung">
+              <ArrowDownUp className="h-4 w-4" />
+            </Button>
           </div>
-          <button
-            className={styles.sortBtn}
-            onClick={() => setSortAsc((p) => !p)}
-            title={sortAsc ? "Absteigend sortieren" : "Aufsteigend sortieren"}
-            type="button"
-          >
-            {sortAsc ? (
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="6 9 12 3 18 9" />
-                <line x1="12" y1="3" x2="12" y2="21" />
-              </svg>
-            ) : (
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="6 15 12 21 18 15" />
-                <line x1="12" y1="21" x2="12" y2="3" />
-              </svg>
-            )}
-          </button>
+
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={handleMarkAllRead} type="button">
+              Alle gelesen
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleClearProgress} type="button">
+              Alle ungelesen
+            </Button>
+            <Button size="sm" onClick={isSyncing ? handleStopSync : handleSync} type="button">
+              {isSyncing ? "Stop Sync" : "Sync All"}
+            </Button>
+          </div>
         </div>
 
-        <div className={styles.actionsRow}>
-          <button
-            className={styles.actionBtn}
-            onClick={handleMarkAllRead}
-            type="button"
-          >
-            Alle gelesen
-          </button>
-          <button
-            className={styles.actionBtn}
-            onClick={handleClearProgress}
-            type="button"
-          >
-            Alle ungelesen
-          </button>
+        <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-xs text-muted-foreground">
+          <span>{pendingCount > 0 ? `${pendingCount} Kapitel noch nicht geladen` : `${chapters.length} Kapitel`}</span>
+          <Badge variant={isSyncing ? "default" : "muted"}>{isSyncing ? "Syncing" : "Idle"}</Badge>
         </div>
-      </div>
 
-      {/* Sync bar */}
-      <div className={styles.syncBar}>
-        <span className={styles.syncInfo}>
-          <span className={styles.syncDot} />
-          {pendingCount > 0 ? `${pendingCount} Kapitel noch nicht geladen` : `${chapters.length} Kapitel`}
-        </span>
-        <button
-          className={styles.syncBtn}
-          onClick={isSyncing ? handleStopSync : handleSync}
-          type="button"
-        >
-          {isSyncing ? "Stop" : "Sync All"}
-        </button>
-      </div>
-
-      {/* Chapter list */}
-      {filteredChapters.length === 0 ? (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>&#128269;</div>
-          <p className={styles.emptyText}>Keine Kapitel gefunden</p>
-        </div>
-      ) : (
-        <ul className={styles.list}>
-          {filteredChapters.map((ch) => {
-            const isRead = readChapters.has(ch.number);
-            const readTime =
-              ch.pageCount > 0 ? Math.max(1, Math.round(ch.pageCount * 0.5)) : 0;
-
-            return (
-              <li key={ch.number} className={styles.item}>
-                <Link
-                  href={`/read/${seriesSlug}/${ch.number}`}
-                  className={`${styles.link} ${isRead ? styles.read : ""}`}
-                >
-                  <span
-                    className={`${styles.dot} ${
-                      ch.status === "crawled"
-                        ? isRead
-                          ? styles.dotRead
-                          : styles.dotReady
-                        : ch.status === "error"
-                        ? styles.dotError
-                        : styles.dotPending
+        {filteredChapters.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            Keine Kapitel gefunden
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {filteredChapters.map((ch) => {
+              const isRead = readChapters.has(ch.number);
+              const readTime = ch.pageCount > 0 ? Math.max(1, Math.round(ch.pageCount * 0.5)) : 0;
+              return (
+                <li key={ch.number}>
+                  <Link
+                    href={`/read/${seriesSlug}/${ch.number}`}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                      isRead
+                        ? "border-emerald-200 bg-emerald-50/70 text-emerald-900"
+                        : "border-border bg-background hover:bg-muted/50"
                     }`}
-                  />
-                  {isRead && <span className={styles.readPrefix}>&#10003;</span>}
-                  <span className={styles.number}>#{ch.number}</span>
-                  <span className={styles.chTitle}>{ch.title}</span>
-                  <span className={styles.meta}>
-                    {readTime > 0 && (
-                      <span className={styles.readTime}>~{readTime} min</span>
-                    )}
-                    {ch.pageCount > 0 && (
-                      <span className={styles.pages}>{ch.pageCount}p</span>
-                    )}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                        ch.status === "crawled"
+                          ? isRead
+                            ? "bg-emerald-500"
+                            : "bg-primary"
+                          : ch.status === "error"
+                          ? "bg-destructive"
+                          : "bg-muted-foreground"
+                      }`}
+                    />
+                    <span className="text-xs font-semibold">#{ch.number}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm">{ch.title}</span>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      {readTime > 0 ? <span>~{readTime} min</span> : null}
+                      {ch.pageCount > 0 ? <span>{ch.pageCount}p</span> : null}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
