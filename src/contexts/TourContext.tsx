@@ -45,8 +45,7 @@ function injectDemoManga() {
     sourceUrl: "https://example.com/demo-tutorial",
     totalChapters: 3,
     addedAt: Date.now(),
-    source: "mangadex",
-    sourceId: "demo",
+    source: "manhwazone",
   };
   localStorage.setItem(SERIES_KEY, JSON.stringify(seriesMap));
 
