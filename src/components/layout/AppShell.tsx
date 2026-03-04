@@ -53,11 +53,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur" role="banner">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center gap-2">
               <picture>
                 <source srcSet="/mangablast.webp" type="image/webp" />
                 <img src="/mangablast.png" alt="Manga Blast" className="h-10 w-auto" />
               </picture>
+              <span className="font-display text-lg font-extrabold tracking-tight" style={{ background: "linear-gradient(135deg, #e8a849, #d4783a)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Manga Blast
+              </span>
             </Link>
             {isOffline && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">

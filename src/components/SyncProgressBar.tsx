@@ -1,12 +1,30 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useSyncContext } from "@/contexts/SyncContext";
 import { Button } from "@/components/ui/button";
 
 export function SyncProgressBar() {
+  const pathname = usePathname();
   const { phase, discovered, completed, total, error, stopSync } = useSyncContext();
+  const isReaderRoute = pathname.startsWith("/read/");
 
   if (phase === "idle") return null;
+
+  // Thin bottom line for reader mode
+  if (isReaderRoute && phase !== "error") {
+    const isDiscovering = phase === "discovering";
+    const pct = isDiscovering ? 100 : total > 0 ? (completed / total) * 100 : 0;
+
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-50 h-1">
+        <div
+          className={`h-full bg-primary/60 transition-all duration-500 ${isDiscovering ? "animate-pulse" : ""}`}
+          style={isDiscovering ? { width: "100%" } : { width: `${pct}%` }}
+        />
+      </div>
+    );
+  }
 
   if (phase === "error") {
     return (

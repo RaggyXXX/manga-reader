@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { BookOpenCheck, CloudDownload, Heart, Play } from "lucide-react";
+import { BookOpenCheck, CloudDownload, Heart, Play, Share2 } from "lucide-react";
 import {
   getChapters,
   getSeries,
@@ -30,6 +30,7 @@ export default function SeriesPage() {
   const [refreshTick, setRefreshTick] = useState(0);
   const [favorite, setFavorite] = useState(false);
   const [status, setStatus] = useState<ReadingStatus | undefined>(undefined);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isSyncing) return;
@@ -83,6 +84,22 @@ export default function SeriesPage() {
     setStatus(newStatus);
   };
 
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/share?url=${encodeURIComponent(series.sourceUrl)}&source=${series.source || "manhwazone"}${series.sourceId ? `&sourceId=${series.sourceId}` : ""}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: series.title, url: shareUrl });
+      } catch {
+        // User cancelled or share failed silently
+      }
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <div key={refreshTick} className="space-y-4">
       <div className="flex items-center justify-between">
@@ -108,14 +125,25 @@ export default function SeriesPage() {
             <div className="space-y-3">
               <div className="flex items-start gap-2">
                 <h1 className="flex-1 text-2xl font-bold tracking-tight">{series.title}</h1>
-                <button
-                  type="button"
-                  onClick={handleToggleFavorite}
-                  className="shrink-0 rounded-lg border border-border p-2 transition-colors hover:bg-muted/50"
-                  aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
-                >
-                  <Heart className={`h-5 w-5 ${favorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
-                </button>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="shrink-0 rounded-lg border border-border p-2 transition-colors hover:bg-muted/50"
+                    aria-label={copied ? "Copied!" : "Share series"}
+                    title={copied ? "Copied!" : "Share series"}
+                  >
+                    <Share2 className={`h-5 w-5 ${copied ? "text-primary" : "text-muted-foreground"}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleToggleFavorite}
+                    className="shrink-0 rounded-lg border border-border p-2 transition-colors hover:bg-muted/50"
+                    aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <Heart className={`h-5 w-5 ${favorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+                  </button>
+                </div>
               </div>
 
               <StatusSelector value={status} onChange={handleStatusChange} />
