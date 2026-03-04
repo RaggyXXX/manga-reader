@@ -184,6 +184,30 @@ function decodeHtmlEntities(str: string): string {
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)));
 }
 
+// ── Relevance scoring ──
+
+function relevanceScore(title: string, query: string): number {
+  const t = title.toLowerCase();
+  const q = query.toLowerCase();
+
+  // Exact match
+  if (t === q) return 100;
+  // Title starts with query
+  if (t.startsWith(q)) return 90;
+  // Exact query appears as whole segment (word boundary)
+  const wordBoundary = new RegExp(`\\b${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+  if (wordBoundary.test(t)) return 80;
+  // Query is contained in title
+  if (t.includes(q)) return 70;
+  // All query words appear in title
+  const qWords = q.split(/\s+/);
+  const allWordsMatch = qWords.every((w) => t.includes(w));
+  if (allWordsMatch) return 60;
+  // Some query words match
+  const matchCount = qWords.filter((w) => t.includes(w)).length;
+  return (matchCount / qWords.length) * 50;
+}
+
 // ── Main handler ──
 
 export async function GET(req: NextRequest) {
@@ -219,6 +243,9 @@ export async function GET(req: NextRequest) {
       });
     }
   });
+
+  // Sort by relevance: best title match first
+  results.sort((a, b) => relevanceScore(b.title, q) - relevanceScore(a.title, q));
 
   return NextResponse.json(
     { results, errors },
