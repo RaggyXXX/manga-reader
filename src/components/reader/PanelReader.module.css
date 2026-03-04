@@ -1,0 +1,106 @@
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.panelViewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.panelImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.touchLayer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  z-index: 2;
+}
+
+.zonePrev {
+  flex: 1;
+  cursor: w-resize;
+}
+
+.zoneCenter {
+  flex: 2;
+  cursor: pointer;
+}
+
+.zoneNext {
+  flex: 1;
+  cursor: e-resize;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+}
+
+.endBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+}
+
+.nextBtn {
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent, #b57f44);
+  color: var(--primary-foreground, #fff);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.nextBtn:hover {
+  background: var(--accent-hover);
+}
+
+.endText {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 16px;
+}
+
+.panelCounter {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  z-index: 3;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
