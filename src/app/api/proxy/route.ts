@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
 
-const FETCH_TIMEOUT = 15000;
+// Netlify free tier: 10s function timeout. Each service gets 8s max.
+const FETCH_TIMEOUT = 8000;
 
 async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
@@ -23,8 +24,7 @@ function isErrorPage(html: string): boolean {
     html.includes("<title>Just a moment") ||
     html.includes("cf-challenge") ||
     html.includes("<title>Access denied") ||
-    html.includes("<title>Error") ||
-    html.includes("<!DOCTYPE html>\n<html>\n<head>\n<style>") // corsproxy error page
+    html.includes("<title>Error")
   );
 }
 
@@ -32,73 +32,21 @@ function isValidHtml(html: string | null | undefined): html is string {
   return !!html && html.length > 200 && !isErrorPage(html);
 }
 
-// --- Proxy service definitions ---
-
-interface ProxyService {
-  name: string;
-  buildUrl: (targetUrl: string) => string;
-  extractHtml: (resp: Response) => Promise<string | null>;
+/** Attempt to fetch HTML via a single proxy service */
+async function tryProxy(
+  name: string,
+  proxyUrl: string,
+  extractHtml: (resp: Response) => Promise<string | null>
+): Promise<string> {
+  const resp = await fetchWithTimeout(proxyUrl);
+  if (!resp.ok) throw new Error(`${name}: HTTP ${resp.status}`);
+  const html = await extractHtml(resp);
+  if (!isValidHtml(html)) throw new Error(`${name}: invalid/error HTML`);
+  return html;
 }
 
-const PROXY_SERVICES: ProxyService[] = [
-  {
-    name: "allorigins-win-get",
-    buildUrl: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-    extractHtml: async (resp) => {
-      try {
-        const json = await resp.json();
-        return json.contents || null;
-      } catch { return null; }
-    },
-  },
-  {
-    name: "allorigins-hexlet-get",
-    buildUrl: (url) => `https://api.allorigins.hexlet.app/get?url=${encodeURIComponent(url)}`,
-    extractHtml: async (resp) => {
-      try {
-        const json = await resp.json();
-        return json.contents || null;
-      } catch { return null; }
-    },
-  },
-  {
-    name: "corsproxy-io",
-    buildUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    extractHtml: async (resp) => resp.text(),
-  },
-  {
-    name: "allorigins-win-raw",
-    buildUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    extractHtml: async (resp) => resp.text(),
-  },
-  {
-    name: "allorigins-hexlet-raw",
-    buildUrl: (url) => `https://api.allorigins.hexlet.app/raw?url=${encodeURIComponent(url)}`,
-    extractHtml: async (resp) => resp.text(),
-  },
-];
-
-/** Try all proxy services to fetch HTML */
-async function fetchHtmlViaProxies(url: string): Promise<string | null> {
-  for (const service of PROXY_SERVICES) {
-    try {
-      const proxyUrl = service.buildUrl(url);
-      const resp = await fetchWithTimeout(proxyUrl);
-      if (resp.ok) {
-        const html = await service.extractHtml(resp);
-        if (isValidHtml(html)) {
-          return html;
-        }
-      }
-    } catch {
-      // fall through to next service
-    }
-  }
-  return null;
-}
-
-/** Direct fetch with full browser-like headers (last resort for HTML) */
-async function fetchHtmlDirect(url: string): Promise<string | null> {
+/** Attempt direct fetch with full browser headers */
+async function tryDirectFetch(url: string): Promise<string> {
   const headers: Record<string, string> = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -116,24 +64,51 @@ async function fetchHtmlDirect(url: string): Promise<string | null> {
     "Cache-Control": "max-age=0",
   };
 
-  try {
-    const resp = await fetchWithTimeout(url, { headers, redirect: "follow" });
-    if (!resp.ok) return null;
+  const resp = await fetchWithTimeout(url, { headers, redirect: "follow" });
+  if (!resp.ok) throw new Error(`direct: HTTP ${resp.status}`);
 
-    const contentType = resp.headers.get("content-type") || "";
-    // Cloudflare sometimes returns images (WEBP challenge) instead of HTML
-    if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
-      return null;
-    }
-
-    const text = await resp.text();
-    if (isValidHtml(text)) {
-      return text;
-    }
-  } catch {
-    // fall through
+  const contentType = resp.headers.get("content-type") || "";
+  if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
+    throw new Error("direct: not HTML (Cloudflare challenge?)");
   }
-  return null;
+
+  const text = await resp.text();
+  if (!isValidHtml(text)) throw new Error("direct: invalid/error HTML");
+  return text;
+}
+
+async function extractJson(resp: Response): Promise<string | null> {
+  try {
+    const json = await resp.json();
+    return json.contents || null;
+  } catch { return null; }
+}
+
+async function extractText(resp: Response): Promise<string | null> {
+  return resp.text();
+}
+
+/**
+ * Race all proxy services + direct fetch in parallel.
+ * Returns the first valid HTML response.
+ */
+async function fetchHtmlParallel(url: string): Promise<string | null> {
+  const encoded = encodeURIComponent(url);
+
+  const attempts: Promise<string>[] = [
+    tryProxy("allorigins-win", `https://api.allorigins.win/get?url=${encoded}`, extractJson),
+    tryProxy("allorigins-hexlet", `https://api.allorigins.hexlet.app/get?url=${encoded}`, extractJson),
+    tryProxy("corsproxy-io", `https://corsproxy.io/?${encoded}`, extractText),
+    tryProxy("allorigins-win-raw", `https://api.allorigins.win/raw?url=${encoded}`, extractText),
+    tryDirectFetch(url),
+  ];
+
+  try {
+    return await Promise.any(attempts);
+  } catch {
+    // All attempts failed
+    return null;
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -156,23 +131,11 @@ export async function GET(req: NextRequest) {
   const isImage = /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(parsed.pathname);
 
   try {
-    // For HTML requests: try proxy services first, then direct fetch
+    // For HTML requests: race all proxy services in parallel
     if (!isImage) {
-      const html = await fetchHtmlViaProxies(url);
+      const html = await fetchHtmlParallel(url);
       if (html) {
         return new NextResponse(html, {
-          headers: {
-            "Content-Type": "text/html; charset=utf-8",
-            "Access-Control-Allow-Origin": "*",
-            "Cache-Control": "no-cache",
-          },
-        });
-      }
-
-      // Last resort: direct fetch with full browser headers
-      const directHtml = await fetchHtmlDirect(url);
-      if (directHtml) {
-        return new NextResponse(directHtml, {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Access-Control-Allow-Origin": "*",
