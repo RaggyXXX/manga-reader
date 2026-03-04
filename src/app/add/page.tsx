@@ -88,6 +88,14 @@ export default function AddSeriesPage() {
 
 // ── Search Mode ──
 
+const SOURCE_FILTERS: { key: MangaSource | "all"; label: string; color: string }[] = [
+  { key: "all", label: "Alle", color: "var(--accent)" },
+  { key: "mangadex", label: "MangaDex", color: "#ff6740" },
+  { key: "mangakatana", label: "MangaKatana", color: "#4a90d9" },
+  { key: "vymanga", label: "VyManga", color: "#6bc95b" },
+  { key: "manhwazone", label: "Manhwazone", color: "#e8a849" },
+];
+
 function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -96,6 +104,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [partialErrors, setPartialErrors] = useState<string[]>([]);
   const [addingUrl, setAddingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<MangaSource | "all">("all");
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -199,6 +208,10 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     }
   };
 
+  const filtered = sourceFilter === "all"
+    ? results
+    : results.filter((r) => r.source === sourceFilter);
+
   return (
     <>
       {/* Search input */}
@@ -216,6 +229,22 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
             className={styles.searchInput}
             autoFocus
           />
+        </div>
+
+        {/* Source filter chips */}
+        <div className={styles.filterRow}>
+          {SOURCE_FILTERS.map((sf) => (
+            <button
+              key={sf.key}
+              type="button"
+              className={`${styles.filterChip} ${sourceFilter === sf.key ? styles.filterChipActive : ""}`}
+              style={sourceFilter === sf.key ? { borderColor: sf.color, background: `${sf.color}18` } : undefined}
+              onClick={() => setSourceFilter(sf.key)}
+            >
+              <span className={styles.filterDot} style={{ background: sf.color }} />
+              {sf.label}
+            </button>
+          ))}
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
@@ -242,15 +271,15 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
         </div>
       )}
 
-      {!searching && searched && results.length === 0 && !error && (
+      {!searching && searched && filtered.length === 0 && !error && (
         <div className={styles.noResults}>
           <p className={styles.noResultsText}>Keine Ergebnisse gefunden</p>
         </div>
       )}
 
-      {!searching && results.length > 0 && (
+      {!searching && filtered.length > 0 && (
         <div className={styles.resultsList}>
-          {results.map((r, i) => (
+          {filtered.map((r, i) => (
             <SearchResultCard
               key={`${r.source}-${r.sourceUrl}-${i}`}
               title={r.title}

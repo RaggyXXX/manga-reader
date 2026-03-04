@@ -192,6 +192,46 @@
   color: var(--text-muted);
 }
 
+/* ── Source filter chips ── */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-display), sans-serif;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filterChip:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.filterChipActive {
+  color: var(--text-primary);
+}
+
+.filterDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* ── Error display ── */
 .error {
   font-size: 13px;
