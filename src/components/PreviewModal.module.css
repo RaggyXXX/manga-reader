@@ -250,6 +250,18 @@
   gap: 5px;
 }
 
+.langRowScrollable {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.langRowScrollable::-webkit-scrollbar {
+  display: none;
+}
+
 .langTag {
   font-size: 10px;
   font-weight: 700;
@@ -260,11 +272,30 @@
   border-radius: 4px;
   letter-spacing: 0.3px;
   cursor: default;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
 .langTagOriginal {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.langTagSelected {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(232, 168, 73, 0.12);
+  cursor: pointer;
+}
+
+.langRowScrollable .langTag {
+  cursor: pointer;
+}
+
+.langRowScrollable .langTag:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 /* Genre / Theme / Format tags */

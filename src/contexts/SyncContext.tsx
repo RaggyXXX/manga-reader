@@ -82,6 +82,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         seriesUrl: null,
         source: series?.source || "manhwazone",
         sourceId: series?.sourceId,
+        preferredLanguage: series?.preferredLanguage || "en",
         unsyncedChapters: unsynced.map((ch) => ({
           number: ch.number,
           title: ch.title,
@@ -239,6 +240,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           seriesUrl: series.sourceUrl,
           source: series.source || "manhwazone",
           sourceId: series.sourceId,
+          preferredLanguage: series.preferredLanguage || "en",
           unsyncedChapters: [],
           alreadySyncedCount: 0,
           totalKnown: 0,
@@ -265,6 +267,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           seriesUrl: null,
           source: series.source || "manhwazone",
           sourceId: series.sourceId,
+          preferredLanguage: series.preferredLanguage || "en",
           unsyncedChapters: unsynced.map((ch) => ({
             number: ch.number,
             title: ch.title,

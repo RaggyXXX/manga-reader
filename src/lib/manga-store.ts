@@ -12,6 +12,7 @@ export interface StoredSeries {
   addedAt: number;
   source?: MangaSource;
   sourceId?: string;
+  preferredLanguage?: string;
 }
 
 export interface StoredChapter {

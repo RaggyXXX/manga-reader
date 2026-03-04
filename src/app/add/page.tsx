@@ -183,7 +183,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     setPreview(result);
   };
 
-  const handleConfirmAdd = async () => {
+  const handleConfirmAdd = async (preferredLanguage?: string) => {
     if (!preview) return;
 
     setAddingUrl(preview.sourceUrl);
@@ -205,6 +205,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
         addedAt: Date.now(),
         source: discovered.source,
         sourceId: discovered.sourceId,
+        ...(preferredLanguage ? { preferredLanguage } : {}),
       });
 
       router.push(`/series/${slug}`);

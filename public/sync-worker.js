@@ -390,6 +390,7 @@ async function syncManhwazone(msg) {
 
 async function syncMangadex(msg) {
   const { slug, sourceId, origin } = msg;
+  const lang = msg.preferredLanguage || "en";
   const unsyncedChapters = msg.unsyncedChapters || [];
   let alreadySyncedCount = msg.alreadySyncedCount || 0;
   let totalKnown = msg.totalKnown || 0;
@@ -399,7 +400,7 @@ async function syncMangadex(msg) {
     if (totalKnown === 0 && sourceId) {
       self.postMessage({ type: "checking_new" });
 
-      const chaptersData = await fetchJson(origin + "/api/mangadex/chapters?mangaId=" + sourceId + "&lang=en");
+      const chaptersData = await fetchJson(origin + "/api/mangadex/chapters?mangaId=" + sourceId + "&lang=" + encodeURIComponent(lang));
       const chapters = chaptersData.chapters || [];
 
       for (let i = 0; i < chapters.length; i++) {
@@ -426,7 +427,7 @@ async function syncMangadex(msg) {
     if (sourceId && !cancelled) {
       self.postMessage({ type: "checking_new" });
 
-      const chaptersData = await fetchJson(origin + "/api/mangadex/chapters?mangaId=" + sourceId + "&lang=en");
+      const chaptersData = await fetchJson(origin + "/api/mangadex/chapters?mangaId=" + sourceId + "&lang=" + encodeURIComponent(lang));
       const apiChapters = chaptersData.chapters || [];
 
       // Find chapters we don't have yet

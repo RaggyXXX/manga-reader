@@ -76,7 +76,7 @@ interface PreviewMeta {
 
 interface PreviewModalProps {
   data: PreviewData;
-  onAdd: () => void;
+  onAdd: (preferredLanguage?: string) => void;
   onClose: () => void;
   adding: boolean;
 }
@@ -84,8 +84,12 @@ interface PreviewModalProps {
 export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps) {
   const [meta, setMeta] = useState<PreviewMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedLang, setSelectedLang] = useState<string>("en");
+  const [langLoading, setLangLoading] = useState(false);
 
-  const imgSrc = data.coverUrl && data.source === "mangadex"
+  const isMangaDex = data.source === "mangadex";
+
+  const imgSrc = data.coverUrl && isMangaDex
     ? `/api/mangadex/img?url=${encodeURIComponent(data.coverUrl)}`
     : data.coverUrl;
 
@@ -102,7 +106,12 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
 
         const resp = await fetch(`/api/preview?${params}`);
         if (!cancelled && resp.ok) {
-          setMeta(await resp.json());
+          const m: PreviewMeta = await resp.json();
+          setMeta(m);
+          // Default to "en" if available, else first language
+          if (m.availableLanguages?.length > 0) {
+            setSelectedLang(m.availableLanguages.includes("en") ? "en" : m.availableLanguages[0]);
+          }
         }
       } catch { /* ignore */ }
       finally {
@@ -113,6 +122,33 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
     fetchMeta();
     return () => { cancelled = true; };
   }, [data.source, data.sourceId, data.sourceUrl]);
+
+  // Re-fetch chapter count when language changes (MangaDex only)
+  const handleLangChange = async (lang: string) => {
+    if (lang === selectedLang) return;
+    setSelectedLang(lang);
+
+    if (!isMangaDex || !data.sourceId) return;
+
+    setLangLoading(true);
+    try {
+      const params = new URLSearchParams({
+        url: data.sourceUrl,
+        source: data.source,
+        lang,
+      });
+      if (data.sourceId) params.set("sourceId", data.sourceId);
+
+      const resp = await fetch(`/api/preview?${params}`);
+      if (resp.ok) {
+        const updated: PreviewMeta = await resp.json();
+        setMeta((prev) => prev ? { ...prev, chapterCount: updated.chapterCount } : prev);
+      }
+    } catch { /* ignore */ }
+    finally {
+      setLangLoading(false);
+    }
+  };
 
   // Lock body scroll when open
   useEffect(() => {
@@ -194,7 +230,7 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
 
           {/* Stats grid */}
           <div className={styles.statsGrid}>
-            <StatItem label="Kapitel" loading={loading}>
+            <StatItem label="Kapitel" loading={loading || langLoading}>
               {meta?.chapterCount || "—"}
             </StatItem>
             <StatItem label="Jahr" loading={loading}>
@@ -278,16 +314,27 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
             </div>
           ) : meta?.availableLanguages && meta.availableLanguages.length > 0 ? (
             <div className={styles.section}>
-              <span className={styles.sectionLabel}>Sprachen ({meta.availableLanguages.length})</span>
-              <div className={styles.langRow}>
+              <span className={styles.sectionLabel}>
+                {isMangaDex && meta.availableLanguages.length > 1
+                  ? `Sprache waehlen (${meta.availableLanguages.length})`
+                  : `Sprachen (${meta.availableLanguages.length})`}
+              </span>
+              <div className={`${styles.langRow} ${isMangaDex && meta.availableLanguages.length > 1 ? styles.langRowScrollable : ""}`}>
                 {meta.availableLanguages.map((lang) => (
-                  <span
+                  <button
                     key={lang}
-                    className={`${styles.langTag} ${lang === meta.originalLanguage ? styles.langTagOriginal : ""}`}
+                    type="button"
+                    className={`${styles.langTag} ${
+                      isMangaDex && meta.availableLanguages.length > 1
+                        ? lang === selectedLang ? styles.langTagSelected : ""
+                        : lang === meta.originalLanguage ? styles.langTagOriginal : ""
+                    }`}
                     title={LANG_NAMES[lang] || lang}
+                    onClick={() => isMangaDex && meta.availableLanguages.length > 1 ? handleLangChange(lang) : undefined}
+                    disabled={langLoading}
                   >
                     {lang.toUpperCase()}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -358,8 +405,8 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
         <div className={styles.stickyFooter}>
           <button
             className={styles.addBtn}
-            onClick={onAdd}
-            disabled={adding}
+            onClick={() => onAdd(isMangaDex ? selectedLang : undefined)}
+            disabled={adding || langLoading}
             type="button"
           >
             {adding ? (

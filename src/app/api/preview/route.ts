@@ -61,7 +61,7 @@ const MANGADEX_API = "https://api.mangadex.org";
 
 // ── MangaDex preview ──
 
-async function previewMangaDex(sourceId: string): Promise<PreviewMeta> {
+async function previewMangaDex(sourceId: string, lang = "en"): Promise<PreviewMeta> {
   const meta = emptyMeta();
 
   const resp = await fetch(
@@ -147,7 +147,7 @@ async function previewMangaDex(sourceId: string): Promise<PreviewMeta> {
   // Chapter count (English)
   try {
     const chResp = await fetch(
-      `${MANGADEX_API}/manga/${sourceId}/feed?translatedLanguage[]=en&limit=1&offset=0`,
+      `${MANGADEX_API}/manga/${sourceId}/feed?translatedLanguage[]=${encodeURIComponent(lang)}&limit=1&offset=0`,
       { headers: { "User-Agent": "MangaReaderPWA/1.0" } },
     );
     if (chResp.ok) {
@@ -434,6 +434,7 @@ export async function GET(req: NextRequest) {
   const sourceUrl = req.nextUrl.searchParams.get("url");
   const source = req.nextUrl.searchParams.get("source");
   const sourceId = req.nextUrl.searchParams.get("sourceId");
+  const lang = req.nextUrl.searchParams.get("lang") || "en";
 
   if (!sourceUrl || !source) {
     return NextResponse.json({ error: "Missing url or source" }, { status: 400 });
@@ -443,7 +444,7 @@ export async function GET(req: NextRequest) {
     let meta: PreviewMeta;
 
     if (source === "mangadex" && sourceId) {
-      meta = await previewMangaDex(sourceId);
+      meta = await previewMangaDex(sourceId, lang);
     } else {
       meta = await previewHtmlSource(sourceUrl, source);
     }
