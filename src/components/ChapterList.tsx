@@ -33,6 +33,7 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
   const [search, setSearch] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const { phase, slug: syncSlug, startSync, stopSync } = useSyncContext();
   const isSyncing = phase !== "idle" && phase !== "error" && syncSlug === seriesSlug;
 
@@ -106,9 +107,20 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
             <Button variant="secondary" size="sm" onClick={handleMarkAllRead} type="button">
               Mark all read
             </Button>
-            <Button variant="outline" size="sm" onClick={handleClearProgress} type="button">
-              Mark all unread
-            </Button>
+            {confirmClear ? (
+              <>
+                <Button variant="destructive" size="sm" onClick={() => { handleClearProgress(); setConfirmClear(false); }} type="button">
+                  Confirm clear
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setConfirmClear(false)} type="button">
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setConfirmClear(true)} type="button">
+                Mark all unread
+              </Button>
+            )}
             <Button size="sm" onClick={isSyncing ? handleStopSync : handleSync} type="button">
               {isSyncing ? "Stop Sync" : "Sync All"}
             </Button>
