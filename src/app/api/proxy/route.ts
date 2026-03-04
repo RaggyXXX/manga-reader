@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Run on Netlify Edge (Deno Deploy) instead of AWS Lambda — different IPs, better Cloudflare compat
+// Edge runtime: 30s timeout on Netlify (vs 10s for regular functions)
 export const runtime = "edge";
 
 const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
 
-const FETCH_TIMEOUT = 8000;
+const FETCH_TIMEOUT = 10000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
@@ -20,6 +24,11 @@ async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Re
   }
 }
 
+function looksLikeHtml(html: string): boolean {
+  const head = html.slice(0, 500);
+  return head.includes("<html") || head.includes("<!DOCTYPE") || head.includes("<!doctype") || head.includes("<HTML");
+}
+
 function isErrorPage(html: string): boolean {
   return (
     html.includes("<title>Not Found") ||
@@ -30,130 +39,109 @@ function isErrorPage(html: string): boolean {
   );
 }
 
-function looksLikeHtml(html: string): boolean {
-  // Must contain an HTML tag somewhere in the first 500 chars
-  // This filters out binary data (WEBP, images) that Cloudflare returns as challenges
-  const head = html.slice(0, 500);
-  return head.includes("<html") || head.includes("<!DOCTYPE") || head.includes("<!doctype") || head.includes("<HTML");
-}
-
 function isValidHtml(html: string | null | undefined): html is string {
   return !!html && html.length > 200 && looksLikeHtml(html) && !isErrorPage(html);
 }
 
-interface AttemptResult {
-  name: string;
+interface DiagEntry {
+  attempt: number;
+  service: string;
   ok: boolean;
   error?: string;
-  status?: number;
   size?: number;
-  contentType?: string;
+  ms?: number;
 }
 
-/** Attempt to fetch HTML via a single proxy service — returns { html, diag } */
-async function tryProxy(
-  name: string,
-  proxyUrl: string,
-  extractHtml: (resp: Response) => Promise<string | null>
-): Promise<{ html: string; diag: AttemptResult }> {
-  const resp = await fetchWithTimeout(proxyUrl);
-  if (!resp.ok) {
-    throw { diag: { name, ok: false, error: `HTTP ${resp.status}`, status: resp.status } };
-  }
-  const html = await extractHtml(resp);
-  const htmlLen = html?.length || 0;
-  if (!isValidHtml(html)) {
-    throw { diag: { name, ok: false, error: "invalid/error HTML", size: htmlLen } };
-  }
-  return { html, diag: { name, ok: true, size: html.length } };
+/** Try allorigins /get endpoint (JSON wrapper) */
+async function tryAlloriginsGet(url: string, mirror: string): Promise<string> {
+  const resp = await fetchWithTimeout(`${mirror}/get?url=${encodeURIComponent(url)}`);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const json = await resp.json();
+  const html: string | undefined = json.contents;
+  const len = html?.length || 0;
+  if (!isValidHtml(html)) throw new Error(`invalid HTML (${len}b)`);
+  return html;
 }
 
-/** Attempt direct fetch with full browser headers */
-async function tryDirectFetch(url: string): Promise<{ html: string; diag: AttemptResult }> {
-  const headers: Record<string, string> = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Sec-Ch-Ua": '"Chromium";v="131", "Not_A Brand";v="24"',
-    "Sec-Ch-Ua-Mobile": "?0",
-    "Sec-Ch-Ua-Platform": '"Windows"',
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Upgrade-Insecure-Requests": "1",
-    "Cache-Control": "max-age=0",
-  };
-
-  const resp = await fetchWithTimeout(url, { headers, redirect: "follow" });
-  if (!resp.ok) {
-    throw { diag: { name: "direct", ok: false, error: `HTTP ${resp.status}`, status: resp.status } };
-  }
-
-  const contentType = resp.headers.get("content-type") || "";
-  if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
-    throw { diag: { name: "direct", ok: false, error: `not HTML: ${contentType}`, contentType } };
-  }
-
-  const text = await resp.text();
-  const textLen = text?.length || 0;
-  if (!isValidHtml(text)) {
-    throw { diag: { name: "direct", ok: false, error: "invalid/error HTML", size: textLen } };
-  }
-  return { html: text, diag: { name: "direct", ok: true, size: text.length } };
+/** Try allorigins /raw endpoint */
+async function tryAlloriginsRaw(url: string, mirror: string): Promise<string> {
+  const resp = await fetchWithTimeout(`${mirror}/raw?url=${encodeURIComponent(url)}`);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const html = await resp.text();
+  const rawLen = html?.length || 0;
+  if (!isValidHtml(html)) throw new Error(`invalid HTML (${rawLen}b)`);
+  return html;
 }
 
-async function extractJson(resp: Response): Promise<string | null> {
-  try {
-    const json = await resp.json();
-    return json.contents || null;
-  } catch { return null; }
+/** Try direct fetch with browser headers */
+async function tryDirect(url: string): Promise<string> {
+  const resp = await fetchWithTimeout(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-User": "?1",
+      "Upgrade-Insecure-Requests": "1",
+    },
+    redirect: "follow",
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const ct = resp.headers.get("content-type") || "";
+  if (!ct.includes("text/html")) throw new Error(`not HTML: ${ct}`);
+  const html = await resp.text();
+  const directLen = html?.length || 0;
+  if (!isValidHtml(html)) throw new Error(`invalid HTML (${directLen}b)`);
+  return html;
 }
 
-async function extractText(resp: Response): Promise<string | null> {
-  return resp.text();
-}
+const ALLORIGINS_MIRRORS = [
+  "https://api.allorigins.win",
+  "https://api.allorigins.hexlet.app",
+];
 
 /**
- * Race all proxy services + direct fetch in parallel.
- * Returns { html, diagnostics }.
+ * Fetch HTML with retry logic.
+ * Strategy: Try allorigins mirrors + direct in parallel, retry up to 3 times with 2s delay.
+ * Edge runtime gives us 30s total budget.
  */
-async function fetchHtmlParallel(url: string): Promise<{ html: string | null; diagnostics: AttemptResult[] }> {
-  const encoded = encodeURIComponent(url);
+async function fetchHtmlWithRetry(url: string): Promise<{ html: string | null; diagnostics: DiagEntry[] }> {
+  const diagnostics: DiagEntry[] = [];
+  const MAX_ATTEMPTS = 3;
 
-  const attempts = [
-    tryProxy("allorigins-win", `https://api.allorigins.win/get?url=${encoded}`, extractJson),
-    tryProxy("allorigins-hexlet", `https://api.allorigins.hexlet.app/get?url=${encoded}`, extractJson),
-    tryProxy("allorigins-win-raw", `https://api.allorigins.win/raw?url=${encoded}`, extractText),
-    tryDirectFetch(url),
-  ];
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (attempt > 1) await delay(2000);
 
-  // Collect all results for diagnostics
-  const settled = await Promise.allSettled(attempts);
-  const diagnostics: AttemptResult[] = [];
+    // Race all services in parallel for this attempt
+    const services: { name: string; fn: () => Promise<string> }[] = [];
+    for (const mirror of ALLORIGINS_MIRRORS) {
+      const name = mirror.includes("hexlet") ? "hexlet" : "allorigins";
+      services.push({ name: `${name}/get`, fn: () => tryAlloriginsGet(url, mirror) });
+      services.push({ name: `${name}/raw`, fn: () => tryAlloriginsRaw(url, mirror) });
+    }
+    services.push({ name: "direct", fn: () => tryDirect(url) });
 
-  for (const result of settled) {
-    if (result.status === "fulfilled") {
-      diagnostics.push(result.value.diag);
-    } else {
-      const reason = result.reason;
-      if (reason?.diag) {
-        diagnostics.push(reason.diag);
+    const start = Date.now();
+    const settled = await Promise.allSettled(services.map((s) => s.fn()));
+
+    for (let i = 0; i < settled.length; i++) {
+      const r = settled[i];
+      const name = services[i].name;
+      const ms = Date.now() - start;
+      if (r.status === "fulfilled") {
+        diagnostics.push({ attempt, service: name, ok: true, size: r.value.length, ms });
       } else {
-        diagnostics.push({
-          name: "unknown",
-          ok: false,
-          error: reason?.message || String(reason),
-        });
+        diagnostics.push({ attempt, service: name, ok: false, error: r.reason?.message || String(r.reason), ms });
       }
     }
-  }
 
-  // Return first successful result
-  for (const result of settled) {
-    if (result.status === "fulfilled") {
-      return { html: result.value.html, diagnostics };
+    // Return first success
+    for (const r of settled) {
+      if (r.status === "fulfilled") {
+        return { html: r.value, diagnostics };
+      }
     }
   }
 
@@ -182,9 +170,8 @@ export async function GET(req: NextRequest) {
   const isImage = /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(parsed.pathname);
 
   try {
-    // For HTML requests: race all proxy services in parallel
     if (!isImage) {
-      const { html, diagnostics } = await fetchHtmlParallel(url);
+      const { html, diagnostics } = await fetchHtmlWithRetry(url);
 
       if (html) {
         if (debug) {
@@ -200,20 +187,20 @@ export async function GET(req: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: "All proxy services failed", diagnostics },
+        { error: "All proxy services failed after retries", diagnostics },
         { status: 502 }
       );
     }
 
     // Direct fetch for images
-    const headers: Record<string, string> = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      "Accept": "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.5",
-      "Referer": "https://manhwazone.to/",
-    };
-
-    const resp = await fetchWithTimeout(url, { headers });
+    const resp = await fetchWithTimeout(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://manhwazone.to/",
+      },
+    });
 
     if (!resp.ok) {
       return NextResponse.json({ error: `Upstream ${resp.status}` }, { status: resp.status });
