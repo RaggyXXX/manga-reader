@@ -39,15 +39,17 @@ async function fetchWithTimeout(url, timeoutMs) {
 }
 
 async function fetchHtmlText(url, origin) {
-  // Try multiple CORS proxies directly from the client browser, then fall back to server proxy
+  // Try got-scraping endpoint first (TLS fingerprint bypass), then CORS proxies, then legacy proxy
   var endpoints = [];
+  // Primary: got-scraping based server endpoint (bypasses CF via TLS fingerprint)
+  endpoints.push({ url: origin + "/api/scrape?url=" + encodeURIComponent(url), json: false });
   if (cfProxyUrl) {
     endpoints.push({ url: cfProxyUrl + "?url=" + encodeURIComponent(url), json: false });
   }
-  // Client-side CORS proxies (direct, fewer hops)
+  // Client-side CORS proxies as fallback
   endpoints.push({ url: "https://proxy.corsfix.com/?" + url, json: false });
   endpoints.push({ url: "https://every-origin.vercel.app/get?url=" + encodeURIComponent(url), json: true });
-  // Server-side proxy as fallback (has its own multi-service retry)
+  // Legacy server-side proxy (allorigins chain)
   endpoints.push({ url: origin + "/api/proxy?url=" + encodeURIComponent(url), json: false });
 
   var lastError = null;

@@ -32,10 +32,12 @@ async function fetchHtml(url: string): Promise<Document> {
   if (CF_PROXY_URL) {
     endpoints.push({ url: CF_PROXY_URL + "?url=" + encodeURIComponent(url) });
   }
-  // Client-side CORS proxies (direct from browser)
+  // Primary: got-scraping based server endpoint (TLS fingerprint bypass)
+  endpoints.push({ url: "/api/scrape?url=" + encodeURIComponent(url) });
+  // Client-side CORS proxies as fallback
   endpoints.push({ url: "https://proxy.corsfix.com/?" + url });
   endpoints.push({ url: "https://every-origin.vercel.app/get?url=" + encodeURIComponent(url), json: true });
-  // Server-side proxy as fallback
+  // Legacy server-side proxy (allorigins chain)
   endpoints.push({ url: IMAGE_PROXY_BASE + encodeURIComponent(url) });
 
   let lastError: Error | null = null;
