@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+
+    // Local workspaces / artifacts
+    ".worktrees/**",
+    "worktrees/**",
+    "test-results/**",
+    ".playwright-mcp/**",
   ]),
 ]);
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LinkIcon, Search, Sparkles } from "lucide-react";
+import { ChevronDown, LinkIcon, Search, Sparkles, X } from "lucide-react";
 import { discoverSeries, detectSource } from "@/lib/scraper";
 import { getAllSeries, saveSeries, type MangaSource } from "@/lib/manga-store";
 import { SearchResultCard } from "@/components/SearchResultCard";
@@ -27,7 +27,7 @@ interface SearchResult {
 type Mode = "search" | "url";
 
 const SOURCE_FILTERS: { key: MangaSource | "all"; label: string; color: string }[] = [
-  { key: "all", label: "All", color: "#b57f44" },
+  { key: "all", label: "All sources", color: "#b57f44" },
   { key: "mangadex", label: "MangaDex", color: "#ff6740" },
   { key: "mangakatana", label: "MangaKatana", color: "#4a90d9" },
   { key: "vymanga", label: "VyManga", color: "#6bc95b" },
@@ -72,9 +72,15 @@ export default function AddSeriesPage() {
         </TabsContent>
       </Tabs>
 
-      <Card>
-        <CardContent className="p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Supported Sources</p>
+      <details className="group overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Supported sources</p>
+            <p className="mt-0.5 text-sm text-foreground/90">MangaDex, MangaKatana, VyManga, Manhwazone</p>
+          </div>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="border-t border-border/70 p-4 pt-3">
           <div className="grid gap-2 sm:grid-cols-2">
             {SOURCES.map((s) => (
               <div key={s.name} className="flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2">
@@ -86,8 +92,8 @@ export default function AddSeriesPage() {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </details>
     </div>
   );
 }
@@ -104,6 +110,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [preview, setPreview] = useState<SearchResult | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const doSearch = useCallback(async (q: string) => {
     abortRef.current?.abort();
@@ -223,27 +230,45 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search manga..."
-              className="pl-9"
+              className="pl-9 pr-10"
               autoFocus
+              ref={inputRef}
             />
+            {query.trim().length > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  inputRef.current?.focus();
+                }}
+                className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
 
-          <div className="sticky top-[4.25rem] z-20 -mx-1 flex flex-wrap gap-2 rounded-xl border border-border/70 bg-card/95 px-1 py-1 backdrop-blur">
-            {SOURCE_FILTERS.map((sf) => (
-              <button
-                key={sf.key}
-                type="button"
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  sourceFilter === sf.key
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setSourceFilter(sf.key)}
-              >
-                <span className="h-2 w-2 rounded-full" style={{ background: sf.color }} />
-                {sf.label}
-              </button>
-            ))}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sources</p>
+            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              {SOURCE_FILTERS.map((sf) => (
+                <button
+                  key={sf.key}
+                  type="button"
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    sourceFilter === sf.key
+                      ? "border-primary/50 bg-primary/10 text-primary"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setSourceFilter(sf.key)}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ background: sf.color }} />
+                  {sf.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -279,7 +304,12 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
       ) : null}
 
       {!searching && filtered.length > 0 ? (
-        <div className="grid gap-3">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{filtered.length} result{filtered.length === 1 ? "" : "s"}</span>
+            <span>{sourceFilter === "all" ? "All sources" : `Source: ${sourceFilter}`}</span>
+          </div>
+          <div className="grid gap-3">
           {filtered.map((r, i) => (
             <SearchResultCard
               key={`${r.source}-${r.sourceUrl}-${i}`}
@@ -292,6 +322,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
               onClick={() => handleClickResult(r)}
             />
           ))}
+          </div>
         </div>
       ) : null}
 

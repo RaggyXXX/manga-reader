@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { BookOpenCheck, CloudDownload, Play } from "lucide-react";
 import { getChapters, getSeries } from "@/lib/manga-store";
+import { getLastReadChapter, getReadChapters } from "@/lib/reading-progress";
 import { imageProxyUrl } from "@/lib/scraper";
 import { ChapterList } from "@/components/ChapterList";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
@@ -17,7 +18,7 @@ import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 export default function SeriesPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { phase, slug: syncSlug } = useSyncContext();
+  const { phase, slug: syncSlug, startSync, stopSync } = useSyncContext();
   const isSyncing = phase !== "idle" && syncSlug === slug;
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -42,7 +43,11 @@ export default function SeriesPage() {
   }
 
   const syncedCount = chapters.filter((ch) => ch.imageUrls.length > 0).length;
-  const continueChapter = chapters.length > 0 ? chapters[0].number : null;
+  const chapterNumbers = chapters.map((ch) => ch.number).sort((a, b) => a - b);
+  const lastRead = getLastReadChapter(slug);
+  const readSet = new Set(getReadChapters(slug));
+  const nextUnread = chapterNumbers.find((n) => !readSet.has(n)) ?? null;
+  const continueChapter = nextUnread ?? lastRead ?? (chapterNumbers[0] ?? null);
   const chaptersPlain = chapters.map((ch) => ({
     number: ch.number,
     title: ch.title,
@@ -53,8 +58,8 @@ export default function SeriesPage() {
   return (
     <div key={refreshTick} className="space-y-4">
       <div className="flex items-center justify-between">
-        <ContextBackChevron />
         <DeleteSeriesButton seriesSlug={slug} seriesTitle={series.title} />
+        <ContextBackChevron />
       </div>
 
       <Card className="overflow-hidden">
@@ -94,8 +99,13 @@ export default function SeriesPage() {
                     </Button>
                   </Link>
                 ) : null}
-                <Button size="sm" variant="secondary">
-                  {isSyncing ? "Syncing chapters..." : "Sync chapters"}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  type="button"
+                  onClick={() => (isSyncing ? stopSync() : startSync(slug))}
+                >
+                  {isSyncing ? "Stop sync" : "Sync chapters"}
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">

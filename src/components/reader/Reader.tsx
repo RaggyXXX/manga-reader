@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
 import styles from "./Reader.module.css";
 import { getReaderSettings, saveReaderSettings } from "@/lib/reader-settings";
 import { markChapterRead } from "@/lib/reading-progress";
@@ -252,7 +253,7 @@ export default function Reader({
         </span>
 
         <button className={styles.backBtn} onClick={handleBack} aria-label="Go back">
-          &#8250;
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </button>
 
         <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { ChevronLeft } from "lucide-react";
 import styles from "./Reader.module.css";
 import { markChapterRead, saveScrollPosition, getScrollPosition } from "@/lib/reading-progress";
 import { imageProxyUrl } from "@/lib/scraper";
@@ -154,7 +155,7 @@ export function Reader({
       {/* Top bar */}
       <div className={`${styles.topBar} ${barsVisible ? "" : styles.hidden}`}>
         <button className={styles.backBtn} onClick={handleBack} aria-label="Go back">
-          &#8250;
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </button>
         <span className={styles.topTitle}>
           Ch. {chapterNumber}

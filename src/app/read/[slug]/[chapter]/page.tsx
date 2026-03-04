@@ -104,7 +104,7 @@ export default function ReaderPage() {
             <p className="text-sm text-destructive">{error}</p>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
               <Button onClick={fetchChapter}>Retry</Button>
-              <ContextBackChevron />
+              <ContextBackChevron variant="card" />
             </div>
           </CardContent>
         </Card>
@@ -120,7 +120,7 @@ export default function ReaderPage() {
             <p className="text-sm text-muted-foreground">No images found.</p>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
               <Button onClick={fetchChapter}>Retry</Button>
-              <ContextBackChevron />
+              <ContextBackChevron variant="card" />
             </div>
           </CardContent>
         </Card>
