@@ -93,7 +93,7 @@ export default function SeriesPage() {
       <Card className="overflow-hidden">
         <CardContent className="p-0 sm:p-0">
           <div className="grid gap-4 p-4 sm:grid-cols-[180px_1fr]">
-            <div className="overflow-hidden rounded-xl border border-border bg-muted/40">
+            <div className="mx-auto max-h-[280px] w-auto overflow-hidden rounded-xl border border-border bg-muted/40 sm:max-h-none sm:w-full">
               {series.coverUrl ? (
                 <img
                   src={imageProxyUrl(series.coverUrl, series.source)}

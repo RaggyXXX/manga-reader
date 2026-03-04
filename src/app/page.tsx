@@ -10,7 +10,6 @@ import {
   LibraryBig,
   Plus,
   Star,
-  Trash2,
   X,
 } from "lucide-react";
 import {
@@ -175,33 +174,6 @@ export default function LibraryPage() {
 
   return (
     <div className="space-y-7">
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-3xl border border-border/70 bg-card/80 p-5 shadow-sm"
-      >
-        <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-primary/15 blur-2xl" />
-        <div className="absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-accent/30 blur-xl" />
-        <div className="relative flex items-start justify-between gap-3">
-          <div>
-            <picture>
-              <source srcSet="/mangablast.webp" type="image/webp" />
-              <img src="/mangablast.png" alt="Manga Blast" className="h-10 w-auto" />
-            </picture>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your cozy manga library
-            </p>
-          </div>
-          <Link href="/add">
-            <Button size="sm" className="shadow-sm">
-              <Plus className="h-4 w-4" />
-              Add series
-            </Button>
-          </Link>
-        </div>
-      </motion.section>
-
       {!isEmpty && (
         <ContinueReading
           series={series.map((s) => ({
