@@ -5,7 +5,6 @@ export const runtime = "edge";
 
 const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
 
-// Netlify free tier: 10s function timeout. Each service gets 8s max.
 const FETCH_TIMEOUT = 8000;
 
 async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
@@ -27,7 +26,7 @@ function isErrorPage(html: string): boolean {
     html.includes("<title>Just a moment") ||
     html.includes("cf-challenge") ||
     html.includes("<title>Access denied") ||
-    html.includes("<title>Error")
+    html.includes("<title>Attention Required")
   );
 }
 
@@ -35,49 +34,67 @@ function isValidHtml(html: string | null | undefined): html is string {
   return !!html && html.length > 200 && !isErrorPage(html);
 }
 
-/** Attempt to fetch HTML via a single proxy service */
+interface AttemptResult {
+  name: string;
+  ok: boolean;
+  error?: string;
+  status?: number;
+  size?: number;
+  contentType?: string;
+}
+
+/** Attempt to fetch HTML via a single proxy service — returns { html, diag } */
 async function tryProxy(
   name: string,
   proxyUrl: string,
   extractHtml: (resp: Response) => Promise<string | null>
-): Promise<string> {
+): Promise<{ html: string; diag: AttemptResult }> {
   const resp = await fetchWithTimeout(proxyUrl);
-  if (!resp.ok) throw new Error(`${name}: HTTP ${resp.status}`);
+  if (!resp.ok) {
+    throw { diag: { name, ok: false, error: `HTTP ${resp.status}`, status: resp.status } };
+  }
   const html = await extractHtml(resp);
-  if (!isValidHtml(html)) throw new Error(`${name}: invalid/error HTML`);
-  return html;
+  const htmlLen = html?.length || 0;
+  if (!isValidHtml(html)) {
+    throw { diag: { name, ok: false, error: "invalid/error HTML", size: htmlLen } };
+  }
+  return { html, diag: { name, ok: true, size: html.length } };
 }
 
 /** Attempt direct fetch with full browser headers */
-async function tryDirectFetch(url: string): Promise<string> {
+async function tryDirectFetch(url: string): Promise<{ html: string; diag: AttemptResult }> {
   const headers: Record<string, string> = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate, br",
-    "Referer": "https://manhwazone.to/",
     "Sec-Ch-Ua": '"Chromium";v="131", "Not_A Brand";v="24"',
     "Sec-Ch-Ua-Mobile": "?0",
     "Sec-Ch-Ua-Platform": '"Windows"',
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Site": "none",
     "Sec-Fetch-User": "?1",
     "Upgrade-Insecure-Requests": "1",
     "Cache-Control": "max-age=0",
   };
 
   const resp = await fetchWithTimeout(url, { headers, redirect: "follow" });
-  if (!resp.ok) throw new Error(`direct: HTTP ${resp.status}`);
+  if (!resp.ok) {
+    throw { diag: { name: "direct", ok: false, error: `HTTP ${resp.status}`, status: resp.status } };
+  }
 
   const contentType = resp.headers.get("content-type") || "";
   if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
-    throw new Error("direct: not HTML (Cloudflare challenge?)");
+    throw { diag: { name: "direct", ok: false, error: `not HTML: ${contentType}`, contentType } };
   }
 
   const text = await resp.text();
-  if (!isValidHtml(text)) throw new Error("direct: invalid/error HTML");
-  return text;
+  const textLen = text?.length || 0;
+  if (!isValidHtml(text)) {
+    throw { diag: { name: "direct", ok: false, error: "invalid/error HTML", size: textLen } };
+  }
+  return { html: text, diag: { name: "direct", ok: true, size: text.length } };
 }
 
 async function extractJson(resp: Response): Promise<string | null> {
@@ -93,29 +110,53 @@ async function extractText(resp: Response): Promise<string | null> {
 
 /**
  * Race all proxy services + direct fetch in parallel.
- * Returns the first valid HTML response.
+ * Returns { html, diagnostics }.
  */
-async function fetchHtmlParallel(url: string): Promise<string | null> {
+async function fetchHtmlParallel(url: string): Promise<{ html: string | null; diagnostics: AttemptResult[] }> {
   const encoded = encodeURIComponent(url);
 
-  const attempts: Promise<string>[] = [
+  const attempts = [
     tryProxy("allorigins-win", `https://api.allorigins.win/get?url=${encoded}`, extractJson),
     tryProxy("allorigins-hexlet", `https://api.allorigins.hexlet.app/get?url=${encoded}`, extractJson),
-    tryProxy("corsproxy-io", `https://corsproxy.io/?${encoded}`, extractText),
     tryProxy("allorigins-win-raw", `https://api.allorigins.win/raw?url=${encoded}`, extractText),
     tryDirectFetch(url),
   ];
 
-  try {
-    return await Promise.any(attempts);
-  } catch {
-    // All attempts failed
-    return null;
+  // Collect all results for diagnostics
+  const settled = await Promise.allSettled(attempts);
+  const diagnostics: AttemptResult[] = [];
+
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      diagnostics.push(result.value.diag);
+    } else {
+      const reason = result.reason;
+      if (reason?.diag) {
+        diagnostics.push(reason.diag);
+      } else {
+        diagnostics.push({
+          name: "unknown",
+          ok: false,
+          error: reason?.message || String(reason),
+        });
+      }
+    }
   }
+
+  // Return first successful result
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      return { html: result.value.html, diagnostics };
+    }
+  }
+
+  return { html: null, diagnostics };
 }
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
+  const debug = req.nextUrl.searchParams.get("debug") === "1";
+
   if (!url) {
     return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });
   }
@@ -136,8 +177,12 @@ export async function GET(req: NextRequest) {
   try {
     // For HTML requests: race all proxy services in parallel
     if (!isImage) {
-      const html = await fetchHtmlParallel(url);
+      const { html, diagnostics } = await fetchHtmlParallel(url);
+
       if (html) {
+        if (debug) {
+          return NextResponse.json({ ok: true, size: html.length, diagnostics });
+        }
         return new NextResponse(html, {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
@@ -148,7 +193,7 @@ export async function GET(req: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: "All proxy services failed for this URL" },
+        { error: "All proxy services failed", diagnostics },
         { status: 502 }
       );
     }
