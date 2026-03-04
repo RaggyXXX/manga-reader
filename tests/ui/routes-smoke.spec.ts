@@ -53,6 +53,7 @@ test.beforeEach(async ({ page }) => {
 
 test("home route renders", async ({ page }) => {
   await page.goto("/");
+  await expect(page.getByTestId("app-shell").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: /manga reader/i })).toBeVisible();
 });
 
