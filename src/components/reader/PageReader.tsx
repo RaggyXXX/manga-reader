@@ -13,6 +13,8 @@ interface ModeProps {
   onTap: () => void;
   nextChapter: number | null;
   onNavigateNext: () => void;
+  onLongPressImage?: (imageIndex: number, x: number, y: number) => void;
+  bookmarkedIndices?: Set<number>;
 }
 
 function getFitClass(mode: ImageFitMode): string {
@@ -36,12 +38,16 @@ export default function PageReader({
   onTap,
   nextChapter,
   onNavigateNext,
+  onLongPressImage,
+  bookmarkedIndices,
 }: ModeProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [fadeState, setFadeState] = useState<"visible" | "entering">("visible");
   const [pastEnd, setPastEnd] = useState(false);
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressMovedRef = useRef(false);
   const total = imageUrls.length;
 
   const reportProgress = useCallback(
@@ -103,6 +109,28 @@ export default function PageReader({
     setPastEnd(false);
     setFadeState("visible");
   }, [imageUrls]);
+
+  // Long-press handlers for bookmark
+  const handleImagePointerDown = useCallback((e: React.PointerEvent) => {
+    if (!onLongPressImage) return;
+    longPressMovedRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      if (!longPressMovedRef.current) {
+        onLongPressImage(currentPage, e.clientX, e.clientY);
+      }
+    }, 600);
+  }, [onLongPressImage, currentPage]);
+
+  const handleImagePointerMove = useCallback(() => {
+    longPressMovedRef.current = true;
+  }, []);
+
+  const handleImagePointerUp = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
 
   // Touch / swipe handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -173,7 +201,13 @@ export default function PageReader({
       </div>
 
       {/* Current image or end banner */}
-      <div className={styles.imageWrapper}>
+      <div
+        className={styles.imageWrapper}
+        onPointerDown={handleImagePointerDown}
+        onPointerMove={handleImagePointerMove}
+        onPointerUp={handleImagePointerUp}
+        onPointerCancel={handleImagePointerUp}
+      >
         {pastEnd ? (
           <div className={styles.endBanner}>
             {nextChapter !== null ? (
@@ -191,16 +225,29 @@ export default function PageReader({
             )}
           </div>
         ) : (
-          <img
-            key={currentPage}
-            src={imageProxyUrl(imageUrls[currentPage])}
-            alt={`Page ${currentPage + 1}`}
-            className={`${styles.pageImage} ${fitClass} ${
-              fadeState === "entering" ? styles.entering : styles.visible
-            }`}
-            draggable={false}
-            referrerPolicy="no-referrer"
-          />
+          <>
+            <img
+              key={currentPage}
+              src={imageProxyUrl(imageUrls[currentPage])}
+              alt={`Page ${currentPage + 1}`}
+              className={`${styles.pageImage} ${fitClass} ${
+                fadeState === "entering" ? styles.entering : styles.visible
+              }`}
+              draggable={false}
+              referrerPolicy="no-referrer"
+            />
+            {bookmarkedIndices?.has(currentPage) && (
+              <div style={{
+                position: 'absolute', top: 8, right: 8,
+                background: 'rgba(0,0,0,0.6)', borderRadius: '50%',
+                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary, #b57f44)" stroke="none">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+            )}
+          </>
         )}
       </div>
 
