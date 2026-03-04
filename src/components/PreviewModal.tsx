@@ -18,12 +18,30 @@ const SOURCE_LABELS: Record<MangaSource, string> = {
   manhwazone: "Manhwazone",
 };
 
+const STATUS_COLORS: Record<string, string> = {
+  Completed: "#7ec88b",
+  Ongoing: "#e8a849",
+  Hiatus: "#e85d6f",
+  Cancelled: "#8a7a6a",
+};
+
 interface PreviewData {
   title: string;
   coverUrl: string;
   sourceUrl: string;
   source: MangaSource;
   sourceId?: string;
+}
+
+interface PreviewMeta {
+  title: string;
+  description: string;
+  status: string;
+  author: string;
+  genres: string[];
+  chapterCount: number;
+  year: number | null;
+  coverUrl: string;
 }
 
 interface PreviewModalProps {
@@ -34,9 +52,8 @@ interface PreviewModalProps {
 }
 
 export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps) {
-  const [chapterCount, setChapterCount] = useState<number | null>(null);
-  const [loadingMeta, setLoadingMeta] = useState(true);
-  const [metaError, setMetaError] = useState(false);
+  const [meta, setMeta] = useState<PreviewMeta | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // MangaDex covers need proxying
   const imgSrc = data.coverUrl && data.source === "mangadex"
@@ -48,31 +65,27 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
 
     async function fetchMeta() {
       try {
-        if (data.source === "mangadex" && data.sourceId) {
-          const resp = await fetch(`/api/mangadex/chapters?mangaId=${data.sourceId}`);
-          if (!cancelled && resp.ok) {
-            const json = await resp.json();
-            setChapterCount(json.total ?? json.chapters?.length ?? null);
-          }
-        } else {
-          // For HTML sources, fetch the series page and count chapter links
-          const resp = await fetch(`/api/scrape?url=${encodeURIComponent(data.sourceUrl)}`);
-          if (!cancelled && resp.ok) {
-            const html = await resp.text();
-            const count = countChaptersFromHtml(html, data.source);
-            setChapterCount(count);
-          }
+        const params = new URLSearchParams({
+          url: data.sourceUrl,
+          source: data.source,
+        });
+        if (data.sourceId) params.set("sourceId", data.sourceId);
+
+        const resp = await fetch(`/api/preview?${params}`);
+        if (!cancelled && resp.ok) {
+          setMeta(await resp.json());
         }
-      } catch {
-        if (!cancelled) setMetaError(true);
-      } finally {
-        if (!cancelled) setLoadingMeta(false);
+      } catch { /* ignore */ }
+      finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchMeta();
     return () => { cancelled = true; };
   }, [data.source, data.sourceId, data.sourceUrl]);
+
+  const statusColor = meta ? STATUS_COLORS[meta.status] || "var(--text-muted)" : undefined;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -101,33 +114,62 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
           )}
         </div>
 
-        {/* Info */}
+        {/* Title + source */}
         <h2 className={styles.title}>{data.title}</h2>
 
-        <span className={styles.badge} style={{ borderColor: SOURCE_COLORS[data.source] }}>
-          <span className={styles.badgeDot} style={{ background: SOURCE_COLORS[data.source] }} />
-          {SOURCE_LABELS[data.source]}
-        </span>
+        <div className={styles.badgeRow}>
+          <span className={styles.badge} style={{ borderColor: SOURCE_COLORS[data.source] }}>
+            <span className={styles.badgeDot} style={{ background: SOURCE_COLORS[data.source] }} />
+            {SOURCE_LABELS[data.source]}
+          </span>
+          {loading ? (
+            <span className={styles.statusShimmer} />
+          ) : meta?.status && meta.status !== "Unknown" ? (
+            <span className={styles.statusBadge} style={{ color: statusColor }}>
+              {meta.status}
+            </span>
+          ) : null}
+        </div>
 
-        {/* Metadata */}
+        {/* Metadata grid */}
         <div className={styles.metaGrid}>
           <div className={styles.metaItem}>
             <span className={styles.metaLabel}>Kapitel</span>
             <span className={styles.metaValue}>
-              {loadingMeta ? (
-                <span className={styles.metaShimmer} />
-              ) : metaError ? (
-                "—"
-              ) : (
-                chapterCount ?? "—"
-              )}
+              {loading ? <span className={styles.metaShimmer} /> : meta?.chapterCount ?? "—"}
             </span>
           </div>
           <div className={styles.metaItem}>
-            <span className={styles.metaLabel}>Quelle</span>
-            <span className={styles.metaValue}>{SOURCE_LABELS[data.source]}</span>
+            <span className={styles.metaLabel}>Autor</span>
+            <span className={styles.metaValueSmall}>
+              {loading ? <span className={styles.metaShimmer} /> : meta?.author && meta.author !== "Unknown" ? meta.author : "—"}
+            </span>
           </div>
         </div>
+
+        {/* Genres */}
+        {loading ? (
+          <div className={styles.genreRow}>
+            <span className={styles.genreShimmer} />
+            <span className={styles.genreShimmer} />
+            <span className={styles.genreShimmer} />
+          </div>
+        ) : meta?.genres && meta.genres.length > 0 ? (
+          <div className={styles.genreRow}>
+            {meta.genres.map((g) => (
+              <span key={g} className={styles.genreTag}>{g}</span>
+            ))}
+          </div>
+        ) : null}
+
+        {/* Description */}
+        {loading ? (
+          <div className={styles.descShimmer}>
+            <span /><span /><span />
+          </div>
+        ) : meta?.description ? (
+          <p className={styles.description}>{meta.description.slice(0, 300)}{meta.description.length > 300 ? "..." : ""}</p>
+        ) : null}
 
         {/* Add button */}
         <button
@@ -159,30 +201,4 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
       </div>
     </div>
   );
-}
-
-function countChaptersFromHtml(html: string, source: MangaSource): number {
-  switch (source) {
-    case "mangakatana": {
-      // MangaKatana: chapter links like /manga/slug.id/c123
-      const matches = html.match(/href="[^"]*\/c(\d+(?:\.\d+)?)/g);
-      return matches ? new Set(matches).size : 0;
-    }
-    case "vymanga": {
-      // VyManga: "Chapter 123" text patterns in chapter list
-      const matches = html.match(/Chapter\s+(\d+(?:\.\d+)?)/g);
-      if (!matches) return 0;
-      const unique = new Set(matches.map((m) => m.replace(/Chapter\s+/, "")));
-      return unique.size;
-    }
-    case "manhwazone": {
-      // Manhwazone: /chapter-123 links
-      const matches = html.match(/href="[^"]*\/chapter-(\d+)/g);
-      return matches ? new Set(matches).size : 0;
-    }
-    default: {
-      const matches = html.match(/Chapter\s+\d+/g);
-      return matches ? new Set(matches).size : 0;
-    }
-  }
 }
