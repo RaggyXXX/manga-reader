@@ -239,14 +239,15 @@ self.onmessage = async function (e) {
 
   if (msg.type === "start") {
     cancelled = false;
-    const { slug, seriesUrl, unsyncedChapters, alreadySyncedCount, totalKnown, origin } = msg;
+    const { slug, seriesUrl, unsyncedChapters, alreadySyncedCount, totalKnown, origin, lastChapterUrl } = msg;
     cfProxyUrl = msg.cfProxyUrl || "";
 
     try {
       let total = totalKnown;
       let completed = alreadySyncedCount;
+      var chaptersToScrape = unsyncedChapters.slice();
 
-      // Phase 1: Discovery (if no chapters known yet)
+      // Phase 1a: Full discovery (if no chapters known yet)
       if (totalKnown === 0 && seriesUrl) {
         const html = await fetchHtmlText(seriesUrl, origin);
         const chapterHrefs = extractAllHrefs(html, "/chapter-");
@@ -272,11 +273,68 @@ self.onmessage = async function (e) {
         return;
       }
 
-      // Phase 2: Scrape images for unsynced chapters
-      for (let i = 0; i < unsyncedChapters.length; i++) {
+      // Phase 1b: Check for NEW chapters (follow "next" from last known chapter)
+      if (lastChapterUrl && !cancelled) {
+        self.postMessage({ type: "checking_new" });
+        var currentUrl = lastChapterUrl;
+
+        while (currentUrl && !cancelled) {
+          try {
+            var html = await fetchHtmlText(currentUrl, origin);
+            var num = extractChapterNum(currentUrl);
+            var nextLink = extractNextLink(html, num);
+
+            if (!nextLink) break;
+
+            var nextUrl = nextLink.startsWith("http") ? nextLink : "https://manhwazone.to" + nextLink;
+
+            // Fetch new chapter — extract title + images in one go
+            var nextHtml = await fetchHtmlText(nextUrl, origin);
+            var nextNum = extractChapterNum(nextUrl);
+            var nextTitle = extractTitle(nextHtml) || ("Chapter " + nextNum);
+            var nextImages = extractImages(nextHtml);
+
+            total++;
+
+            if (nextImages.length > 0) {
+              // Fully scraped new chapter in one pass
+              completed++;
+              self.postMessage({
+                type: "chapter_scraped",
+                slug: slug,
+                number: nextNum,
+                title: nextTitle,
+                url: nextUrl,
+                imageUrls: nextImages,
+                completed: completed,
+                total: total,
+              });
+            } else {
+              // Discovered but no images — add to scrape queue
+              self.postMessage({
+                type: "chapter_discovered",
+                number: nextNum,
+                title: nextTitle,
+                url: nextUrl,
+                discoveredCount: total,
+              });
+              chaptersToScrape.push({ number: nextNum, title: nextTitle, url: nextUrl });
+            }
+
+            currentUrl = nextUrl;
+            if (!cancelled) await delay(REQUEST_DELAY);
+          } catch (e) {
+            // Stop checking on error (network issue, end of chapters)
+            break;
+          }
+        }
+      }
+
+      // Phase 2: Scrape images for all unsynced chapters (existing + newly discovered)
+      for (let i = 0; i < chaptersToScrape.length; i++) {
         if (cancelled) break;
 
-        const ch = unsyncedChapters[i];
+        const ch = chaptersToScrape[i];
         try {
           const html = await fetchHtmlText(ch.url, origin);
           const imageUrls = extractImages(html);
@@ -296,7 +354,7 @@ self.onmessage = async function (e) {
           completed++;
         }
 
-        if (i < unsyncedChapters.length - 1 && !cancelled) {
+        if (i < chaptersToScrape.length - 1 && !cancelled) {
           await delay(1500);
         }
       }

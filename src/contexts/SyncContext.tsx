@@ -109,6 +109,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const slug = slugRef.current;
 
       switch (msg.type) {
+        case "checking_new": {
+          setState((prev) => ({
+            ...prev,
+            phase: "discovering",
+          }));
+          break;
+        }
+
         case "chapter_discovered": {
           if (!slug) break;
           const stub: StoredChapter = {
@@ -213,6 +221,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const worker = getWorker();
 
       if (allChapters.length === 0) {
+        // No chapters at all — full discovery from series page
         setState({
           phase: "discovering",
           slug,
@@ -228,11 +237,17 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           unsyncedChapters: [],
           alreadySyncedCount: 0,
           totalKnown: 0,
+          lastChapterUrl: null,
           origin: window.location.origin,
+          cfProxyUrl: CF_PROXY_URL,
         });
-      } else if (unsynced.length > 0) {
+      } else {
+        // Has chapters — check for new ones + scrape any unsynced
+        const sorted = [...allChapters].sort((a, b) => b.number - a.number);
+        const lastChapter = sorted[0];
+
         setState({
-          phase: "scraping",
+          phase: unsynced.length > 0 ? "scraping" : "discovering",
           slug,
           discovered: allChapters.length,
           completed: alreadySynced,
@@ -250,21 +265,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           })),
           alreadySyncedCount: alreadySynced,
           totalKnown: allChapters.length,
+          lastChapterUrl: lastChapter.url,
           origin: window.location.origin,
+          cfProxyUrl: CF_PROXY_URL,
         });
-      } else {
-        // All chapters already synced — brief feedback
-        setState({
-          phase: "scraping",
-          slug,
-          discovered: allChapters.length,
-          completed: allChapters.length,
-          total: allChapters.length,
-          error: null,
-        });
-        setTimeout(() => {
-          setState((prev) => (prev.slug === slug && prev.completed === prev.total ? IDLE_STATE : prev));
-        }, 1500);
       }
     },
     [state.phase, getWorker]
