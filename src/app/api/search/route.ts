@@ -72,8 +72,10 @@ async function searchMangaKatana(q: string): Promise<SearchResult[]> {
   const html = await resp.text();
 
   const results: SearchResult[] = [];
-  // Split by item blocks
-  const items = html.split(/class\s*=\s*["']item\b/);
+  // Only parse search results section, not sidebar (Hot Manga)
+  const hotIdx = html.indexOf("Hot Manga");
+  const searchHtml = hotIdx > -1 ? html.slice(0, hotIdx) : html;
+  const items = searchHtml.split(/class\s*=\s*["']item\b/);
   for (let i = 1; i < items.length && results.length < 10; i++) {
     const block = items[i];
     // Extract cover image
@@ -102,18 +104,24 @@ async function searchVyManga(q: string): Promise<SearchResult[]> {
   const html = await resp.text();
 
   const results: SearchResult[] = [];
-  // VyManga search results are in manga item blocks
-  const items = html.split(/class\s*=\s*["']manga-item\b|class\s*=\s*["']item\b/);
+  // VyManga search results use class="comic-item" containers
+  const items = html.split(/class\s*=\s*["']comic-item\b/);
   for (let i = 1; i < items.length && results.length < 10; i++) {
     const block = items[i];
-    // Extract link + title
+    // Extract link: <a href="/manga/slug">
     const linkMatch = block.match(/<a\s+href\s*=\s*["'](\/manga\/[^"']+)["'][^>]*>/);
-    const titleMatch = block.match(/(?:title|alt)\s*=\s*["']([^"']+)["']/);
-    const imgMatch = block.match(/<img[^>]+(?:data-src|src)\s*=\s*["']([^"']+)["']/);
+    // Extract cover image: <img ... data-src="https://cdnxyz.xyz/..." or src="..."
+    // Skip placeholder /web/img/blank.gif
+    const imgMatch = block.match(/<img[^>]+(?:data-src|src)\s*=\s*["'](https?:\/\/[^"']+)["']/);
+    // Extract title from <div class="comic-title">Title</div>
+    const titleMatch = block.match(/class\s*=\s*["']comic-title["'][^>]*>([^<]+)</);
+    // Fallback: title/alt attribute on <img>
+    const titleFallback = block.match(/(?:title|alt)\s*=\s*["']([^"']+)["']/);
 
     if (linkMatch) {
+      const title = titleMatch?.[1]?.trim() || titleFallback?.[1]?.trim() || "Unknown";
       results.push({
-        title: decodeHtmlEntities(titleMatch?.[1]?.trim() || "Unknown"),
+        title: decodeHtmlEntities(title),
         coverUrl: imgMatch?.[1] || "",
         sourceUrl: `https://vymanga.com${linkMatch[1]}`,
         source: "vymanga",
@@ -136,19 +144,26 @@ async function searchManhwazone(q: string): Promise<SearchResult[]> {
   }
 
   const results: SearchResult[] = [];
-  // Split by series cards/items
-  const items = html.split(/class\s*=\s*["']item\b|class\s*=\s*["']book-item\b|class\s*=\s*["']manga-item\b/);
+  // Manhwazone uses <article> elements for each result card
+  const items = html.split(/<article\b/);
   for (let i = 1; i < items.length && results.length < 10; i++) {
     const block = items[i];
-    const linkMatch = block.match(/<a\s+href\s*=\s*["'](https?:\/\/manhwazone\.to\/series\/[^"']+)["']/);
-    const titleMatch = block.match(/(?:title|alt)\s*=\s*["']([^"']+)["']/);
-    const imgMatch = block.match(/<img[^>]+(?:data-src|src)\s*=\s*["']([^"']+)["']/);
+    // Extract link: <a href="/series/slug"> (relative URLs)
+    const linkMatch = block.match(/<a\s+href\s*=\s*["'](\/series\/[^"']+)["']/);
+    // Extract cover image: <img src="https://media.manhwazone.to/i/cover/...">
+    const imgMatch = block.match(/<img\s+src\s*=\s*["'](https?:\/\/[^"']+)["']/);
+    // Extract title: second <a> with the series link contains the title text
+    // Pattern: <a href="/series/slug" class="...font-semibold...">Title</a>
+    const titleMatch = block.match(/<a\s+href\s*=\s*["']\/series\/[^"']+["'][^>]*class\s*=\s*["'][^"']*font-semibold[^"']*["'][^>]*>\s*([^<]+)</);
+    // Fallback: alt attribute on <img> (contains "Title cover")
+    const altMatch = block.match(/alt\s*=\s*["']([^"']+?)(?:\s+cover)?["']/);
 
     if (linkMatch) {
+      const title = titleMatch?.[1]?.trim() || altMatch?.[1]?.trim() || "Unknown";
       results.push({
-        title: decodeHtmlEntities(titleMatch?.[1]?.trim() || "Unknown"),
+        title: decodeHtmlEntities(title),
         coverUrl: imgMatch?.[1] || "",
-        sourceUrl: linkMatch[1],
+        sourceUrl: `https://manhwazone.to${linkMatch[1]}`,
         source: "manhwazone",
       });
     }
@@ -204,7 +219,7 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json(
-    { query: q, results, errors },
+    { results, errors },
     {
       headers: {
         "Cache-Control": "no-store",
