@@ -162,22 +162,27 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
 }
 
 function countChaptersFromHtml(html: string, source: MangaSource): number {
-  let pattern: RegExp;
   switch (source) {
-    case "mangakatana":
-      pattern = /href="[^"]*\/c\d/g;
-      break;
-    case "vymanga":
-      pattern = /href="[^"]*chapter-\d/g;
-      break;
-    case "manhwazone":
-      pattern = /href="[^"]*\/chapter-\d/g;
-      break;
-    default:
-      pattern = /href="[^"]*chapter[/-]\d/g;
+    case "mangakatana": {
+      // MangaKatana: chapter links like /manga/slug.id/c123
+      const matches = html.match(/href="[^"]*\/c(\d+(?:\.\d+)?)/g);
+      return matches ? new Set(matches).size : 0;
+    }
+    case "vymanga": {
+      // VyManga: "Chapter 123" text patterns in chapter list
+      const matches = html.match(/Chapter\s+(\d+(?:\.\d+)?)/g);
+      if (!matches) return 0;
+      const unique = new Set(matches.map((m) => m.replace(/Chapter\s+/, "")));
+      return unique.size;
+    }
+    case "manhwazone": {
+      // Manhwazone: /chapter-123 links
+      const matches = html.match(/href="[^"]*\/chapter-(\d+)/g);
+      return matches ? new Set(matches).size : 0;
+    }
+    default: {
+      const matches = html.match(/Chapter\s+\d+/g);
+      return matches ? new Set(matches).size : 0;
+    }
   }
-  const matches = html.match(pattern);
-  if (!matches) return 0;
-  const unique = new Set(matches);
-  return unique.size;
 }
