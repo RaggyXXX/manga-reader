@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { BarChart3, BookOpen, Clock3, Database, Download, HelpCircle, Images } from "lucide-react";
+import { BarChart3, Bookmark as BookmarkIcon, BookOpen, Clock3, Database, Download, HelpCircle, Images } from "lucide-react";
 import { deleteSeries as deleteStoredSeries, getAllSeries, getChapters } from "@/lib/manga-store";
 import { getReadingStats } from "@/lib/reading-progress";
 import { Badge } from "@/components/ui/badge";
@@ -168,6 +168,21 @@ export default function StatsPage() {
             <Link href="/install">
               <Download className="mr-1 h-4 w-4" />
               Install Guide
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex items-center justify-between p-4">
+          <div>
+            <p className="font-medium">Bookmarks</p>
+            <p className="text-sm text-muted-foreground">Your saved pages and panels</p>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/bookmarks">
+              <BookmarkIcon className="mr-1 h-4 w-4" />
+              View
             </Link>
           </Button>
         </CardContent>
