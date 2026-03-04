@@ -72,7 +72,7 @@ export default function AddSeriesPage() {
         </TabsContent>
       </Tabs>
 
-      <details className="group overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+      <details open className="group overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Supported sources</p>
@@ -107,10 +107,12 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [addingUrl, setAddingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<MangaSource | "all">("all");
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
   const [preview, setPreview] = useState<SearchResult | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const doSearch = useCallback(async (q: string) => {
     abortRef.current?.abort();
@@ -168,6 +170,19 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, doSearch]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setSourceDropdownOpen(false);
+      }
+    }
+    if (sourceDropdownOpen) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [sourceDropdownOpen]);
 
   const filtered = useMemo(
     () => (sourceFilter === "all" ? results : results.filter((r) => r.source === sourceFilter)),
@@ -250,17 +265,37 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
             ) : null}
           </div>
 
-          <div className="relative">
-            <select
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value as MangaSource | "all")}
-              className="w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 pr-8 text-sm font-medium text-foreground transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setSourceDropdownOpen((v) => !v)}
+              className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
             >
-              {SOURCE_FILTERS.map((sf) => (
-                <option key={sf.key} value={sf.key}>{sf.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full" style={{ background: SOURCE_FILTERS.find((sf) => sf.key === sourceFilter)?.color }} />
+                {SOURCE_FILTERS.find((sf) => sf.key === sourceFilter)?.label}
+              </span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${sourceDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {sourceDropdownOpen && (
+              <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+                {SOURCE_FILTERS.map((sf) => (
+                  <button
+                    key={sf.key}
+                    type="button"
+                    onClick={() => { setSourceFilter(sf.key); setSourceDropdownOpen(false); }}
+                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                      sourceFilter === sf.key
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ background: sf.color }} />
+                    {sf.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
