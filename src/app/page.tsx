@@ -207,8 +207,8 @@ export default function LibraryPage() {
     <div className="space-y-7">
       {/* Search overlay */}
       {searchOpen && (
-        <div className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
+        <div className="fixed inset-x-0 top-0 z-50 border-b border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4">
             <Search className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
             <input
               ref={searchInputRef}
