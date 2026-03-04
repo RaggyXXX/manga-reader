@@ -23,6 +23,7 @@ interface SeriesCardProps {
   selected?: boolean;
   onSelect?: (slug: string) => void;
   onLongPress?: (slug: string) => void;
+  updateCount?: number;
 }
 
 export function SeriesCard({
@@ -38,6 +39,7 @@ export function SeriesCard({
   selected,
   onSelect,
   onLongPress,
+  updateCount,
 }: SeriesCardProps) {
   const reduced = useReducedMotion();
   const readCount = getReadChapters(slug).length;
@@ -129,6 +131,13 @@ export function SeriesCard({
           <div className="absolute left-2 bottom-10">
             <StatusBadge status={readingStatus} />
           </div>
+        )}
+
+        {/* Update available badge - bottom right above title gradient */}
+        {updateCount != null && updateCount > 0 && (
+          <span className="absolute right-2 bottom-10 inline-flex items-center gap-0.5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
+            NEW +{updateCount}
+          </span>
         )}
       </div>
 

@@ -30,6 +30,7 @@ import { ContinueReading } from "@/components/ContinueReading";
 import { StatusSelector } from "@/components/StatusSelector";
 import { BatchActionBar } from "@/components/BatchActionBar";
 import { Button } from "@/components/ui/button";
+import { useSyncContext } from "@/contexts/SyncContext";
 
 const SORT_LABELS: Record<SortOption, string> = {
   last_read: "Last Read",
@@ -56,6 +57,7 @@ const STATUS_LABELS: Record<ReadingStatus, string> = {
 };
 
 export default function LibraryPage() {
+  const { updateFlags } = useSyncContext();
   const [series, setSeries] = useState<StoredSeries[]>(() => getAllSeries());
   const [prefs, setPrefs] = useState(() => getLibraryPrefs());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -368,6 +370,7 @@ export default function LibraryPage() {
                     selected={selectedSlugs.has(s.slug)}
                     onSelect={selectionMode ? handleSelect : undefined}
                     onLongPress={!selectionMode ? handleLongPress : undefined}
+                    updateCount={updateFlags[s.slug]?.newCount}
                   />
                 ))}
               </div>
@@ -401,6 +404,7 @@ export default function LibraryPage() {
                     selected={selectedSlugs.has(s.slug)}
                     onSelect={selectionMode ? handleSelect : undefined}
                     onLongPress={!selectionMode ? handleLongPress : undefined}
+                    updateCount={updateFlags[s.slug]?.newCount}
                   />
                 ))}
               </div>

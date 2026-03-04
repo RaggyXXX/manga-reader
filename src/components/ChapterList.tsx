@@ -8,8 +8,6 @@ import {
   getReadChapters,
   markAllChaptersRead,
 } from "@/lib/reading-progress";
-import { useSyncContext } from "@/contexts/SyncContext";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,16 +32,6 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
   const [sortAsc, setSortAsc] = useState(false);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
-  const { phase, slug: syncSlug, startSync, stopSync } = useSyncContext();
-  const isSyncing = phase !== "idle" && phase !== "error" && syncSlug === seriesSlug;
-
-  const handleSync = useCallback(() => {
-    startSync(seriesSlug);
-  }, [seriesSlug, startSync]);
-
-  const handleStopSync = useCallback(() => {
-    stopSync();
-  }, [stopSync]);
 
   const handleMarkAllRead = useCallback(() => {
     const allNumbers = chapters.map((ch) => ch.number);
@@ -121,15 +109,11 @@ export function ChapterList({ chapters, seriesSlug }: Props) {
                 Mark all unread
               </Button>
             )}
-            <Button size="sm" onClick={isSyncing ? handleStopSync : handleSync} type="button">
-              {isSyncing ? "Stop Sync" : "Sync All"}
-            </Button>
           </div>
         </div>
 
         <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-xs text-muted-foreground">
           <span>{pendingCount > 0 ? `${pendingCount} chapters not yet loaded` : `${chapters.length} chapters`}</span>
-          <Badge variant={isSyncing ? "default" : "muted"}>{isSyncing ? "Syncing" : "Idle"}</Badge>
         </div>
 
         {filteredChapters.length === 0 ? (
