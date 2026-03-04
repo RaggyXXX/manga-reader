@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/" className="flex items-center">
               <picture>
                 <source srcSet="/mangablast.webp" type="image/webp" />
-                <img src="/mangablast.png" alt="Manga Blast" className="h-8 w-auto" />
+                <img src="/mangablast.png" alt="Manga Blast" className="h-10 w-auto" />
               </picture>
             </Link>
             {isOffline && (
