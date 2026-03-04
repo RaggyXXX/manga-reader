@@ -44,10 +44,64 @@
   color: var(--text-primary);
 }
 
+/* ── Mode toggle pills ── */
+.modeToggle {
+  display: flex;
+  max-width: 500px;
+  margin: 20px auto 0;
+  padding: 0 20px;
+  gap: 0;
+}
+
+@media (max-width: 540px) {
+  .modeToggle {
+    margin: 16px 16px 0;
+    padding: 0;
+  }
+}
+
+.modeBtn {
+  flex: 1;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-display), sans-serif;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modeBtn:first-child {
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  border-right: none;
+}
+
+.modeBtn:last-child {
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+
+.modeBtn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.modeBtnActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 /* ── Form card ── */
 .form {
   max-width: 500px;
-  margin: 24px auto;
+  margin: 16px auto;
   padding: 24px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
@@ -100,6 +154,44 @@
   opacity: 0.5;
 }
 
+/* ── Search input with icon ── */
+.searchInputWrap {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px 0 42px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
 /* ── Error display ── */
 .error {
   font-size: 13px;
@@ -107,6 +199,17 @@
   padding: 10px 14px;
   background: rgba(232, 93, 111, 0.1);
   border: 1px solid rgba(232, 93, 111, 0.15);
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+
+/* ── Warning banner ── */
+.warning {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  background: rgba(232, 168, 73, 0.1);
+  border: 1px solid rgba(232, 168, 73, 0.15);
   border-radius: var(--radius-sm);
   line-height: 1.4;
 }
@@ -159,6 +262,89 @@
   text-align: center;
   font-style: italic;
   line-height: 1.5;
+}
+
+/* ── Search results list ── */
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 0 20px 24px;
+}
+
+@media (max-width: 540px) {
+  .resultsList {
+    padding: 0 16px 24px;
+  }
+}
+
+/* ── Skeleton shimmer cards ── */
+.skeletonCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+
+.skeletonCover {
+  width: 48px;
+  height: 68px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-hover) 40%, var(--bg-secondary) 80%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonLines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonLine {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-hover) 40%, var(--bg-secondary) 80%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonLine:first-child {
+  width: 70%;
+}
+
+.skeletonLine:last-child {
+  width: 40%;
+  height: 11px;
+}
+
+/* ── No results state ── */
+.noResults {
+  text-align: center;
+  padding: 24px 20px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.noResultsText {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.minChars {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 16px 20px;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 /* ── Supported sources ── */
