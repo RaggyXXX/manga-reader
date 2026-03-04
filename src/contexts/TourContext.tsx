@@ -165,6 +165,23 @@ function buildTourPhases(): TourPhase[] {
     ],
   });
 
+  // Phase 4: Install guide
+  phases.push({
+    path: "/install",
+    steps: [
+      {
+        element: '[data-tour="install-page"]',
+        popover: {
+          title: "Install Manga Blast",
+          description:
+            "Add Manga Blast to your home screen for fullscreen reading, offline access, and a native app experience.",
+          side: "bottom",
+          align: "center",
+        },
+      },
+    ],
+  });
+
   return phases;
 }
 

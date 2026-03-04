@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { BarChart3, BookOpen, Clock3, Database, HelpCircle, Images } from "lucide-react";
+import { BarChart3, BookOpen, Clock3, Database, Download, HelpCircle, Images } from "lucide-react";
 import { deleteSeries as deleteStoredSeries, getAllSeries, getChapters } from "@/lib/manga-store";
 import { getReadingStats } from "@/lib/reading-progress";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 import { useTour } from "@/contexts/TourContext";
+import Link from "next/link";
 
 function formatRelativeTime(timestamp: number): string {
   if (!timestamp) return "Unknown";
@@ -51,6 +52,7 @@ export default function StatsPage() {
   };
 
   const clearAll = () => {
+    if (!confirm("Delete all cached series data? This cannot be undone.")) return;
     seriesList.forEach((s) => deleteStoredSeries(s.slug));
     window.location.reload();
   };
@@ -152,6 +154,21 @@ export default function StatsPage() {
           <Button variant="outline" size="sm" onClick={startTour}>
             <HelpCircle className="mr-1 h-4 w-4" />
             Start Tour
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex items-center justify-between p-4">
+          <div>
+            <p className="font-medium">How to Install</p>
+            <p className="text-sm text-muted-foreground">Add Manga Blast to your home screen</p>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/install">
+              <Download className="mr-1 h-4 w-4" />
+              Install Guide
+            </Link>
           </Button>
         </CardContent>
       </Card>
