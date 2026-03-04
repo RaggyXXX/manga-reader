@@ -4,6 +4,7 @@
 const REQUEST_DELAY = 500;
 
 let cancelled = false;
+let cfProxyUrl = ""; // Set from start message
 
 // ── Helpers ──
 
@@ -11,26 +12,43 @@ function delay(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function fetchHtmlText(url, origin) {
-  // All HTML fetching goes through our proxy (which uses allorigins server-side)
-  const proxyBase = origin + "/api/proxy?url=";
-  const resp = await fetch(proxyBase + encodeURIComponent(url));
-  if (!resp.ok) {
-    throw new Error("Proxy returned " + resp.status);
-  }
-  const text = await resp.text();
+function validateHtmlText(text) {
   if (!text || text.length < 200) {
     throw new Error("Proxy returned empty/short response");
   }
-  // Detect binary data (Cloudflare WEBP challenge) or error pages
-  const head = text.slice(0, 500);
+  var head = text.slice(0, 500);
   if (!head.includes("<html") && !head.includes("<!DOCTYPE") && !head.includes("<!doctype")) {
     throw new Error("Proxy returned non-HTML (possible Cloudflare challenge)");
   }
   if (head.includes("<title>Just a moment") || head.includes("cf-challenge") || head.includes("<title>Attention Required")) {
     throw new Error("Proxy returned Cloudflare challenge page");
   }
-  return text;
+}
+
+async function fetchHtmlText(url, origin) {
+  // Strategy: Try CF Worker first (if configured), then Netlify proxy
+  var endpoints = [];
+  if (cfProxyUrl) {
+    endpoints.push(cfProxyUrl + "?url=" + encodeURIComponent(url));
+  }
+  endpoints.push(origin + "/api/proxy?url=" + encodeURIComponent(url));
+
+  var lastError = null;
+  for (var i = 0; i < endpoints.length; i++) {
+    try {
+      var resp = await fetch(endpoints[i]);
+      if (!resp.ok) {
+        lastError = new Error("Proxy returned " + resp.status);
+        continue;
+      }
+      var text = await resp.text();
+      validateHtmlText(text);
+      return text;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError || new Error("All proxies failed");
 }
 
 function extractChapterNum(url) {
@@ -197,6 +215,7 @@ self.onmessage = async function (e) {
   if (msg.type === "start") {
     cancelled = false;
     const { slug, seriesUrl, unsyncedChapters, alreadySyncedCount, totalKnown, origin } = msg;
+    cfProxyUrl = msg.cfProxyUrl || "";
 
     try {
       let total = totalKnown;

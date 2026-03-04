@@ -19,6 +19,8 @@ import {
 
 export type SyncPhase = "idle" | "discovering" | "scraping" | "error";
 
+const CF_PROXY_URL = process.env.NEXT_PUBLIC_CF_PROXY_URL || "";
+
 interface SyncState {
   phase: SyncPhase;
   slug: string | null;
@@ -85,6 +87,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         alreadySyncedCount: alreadySynced,
         totalKnown: allChapters.length,
         origin: window.location.origin,
+        cfProxyUrl: CF_PROXY_URL,
       });
       setState({
         phase: "scraping",

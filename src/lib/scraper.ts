@@ -1,21 +1,17 @@
 const IMAGE_PROXY_BASE = "/api/proxy?url=";
 const REQUEST_DELAY = 500;
 
+// CF Worker proxy URL (set via NEXT_PUBLIC_CF_PROXY_URL env var)
+const CF_PROXY_URL = process.env.NEXT_PUBLIC_CF_PROXY_URL || "";
+
 export function imageProxyUrl(url: string): string {
   return IMAGE_PROXY_BASE + encodeURIComponent(url) + "&v=2";
 }
 
-async function fetchHtml(url: string): Promise<Document> {
-  // All HTML fetching goes through our proxy (which uses allorigins server-side)
-  const resp = await fetch(IMAGE_PROXY_BASE + encodeURIComponent(url));
-  if (!resp.ok) {
-    throw new Error(`Proxy returned ${resp.status}`);
-  }
-  const text = await resp.text();
+function validateHtmlText(text: string): void {
   if (!text || text.length < 200) {
     throw new Error("Proxy returned empty/short response");
   }
-  // Detect binary data (Cloudflare WEBP challenge) or error pages
   const head = text.slice(0, 500);
   if (!head.includes("<html") && !head.includes("<!DOCTYPE") && !head.includes("<!doctype")) {
     throw new Error("Proxy returned non-HTML (possible Cloudflare challenge)");
@@ -23,7 +19,32 @@ async function fetchHtml(url: string): Promise<Document> {
   if (head.includes("<title>Just a moment") || head.includes("cf-challenge") || head.includes("<title>Attention Required")) {
     throw new Error("Proxy returned Cloudflare challenge page");
   }
-  return new DOMParser().parseFromString(text, "text/html");
+}
+
+async function fetchHtml(url: string): Promise<Document> {
+  // Strategy: Try CF Worker first (if configured), then our Netlify proxy
+  const endpoints = [];
+  if (CF_PROXY_URL) {
+    endpoints.push(CF_PROXY_URL + "?url=" + encodeURIComponent(url));
+  }
+  endpoints.push(IMAGE_PROXY_BASE + encodeURIComponent(url));
+
+  let lastError: Error | null = null;
+  for (const endpoint of endpoints) {
+    try {
+      const resp = await fetch(endpoint);
+      if (!resp.ok) {
+        lastError = new Error(`Proxy returned ${resp.status}`);
+        continue;
+      }
+      const text = await resp.text();
+      validateHtmlText(text);
+      return new DOMParser().parseFromString(text, "text/html");
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+    }
+  }
+  throw lastError || new Error("All proxies failed");
 }
 
 function delay(ms: number): Promise<void> {
