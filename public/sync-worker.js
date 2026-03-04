@@ -25,23 +25,46 @@ function validateHtmlText(text) {
   }
 }
 
+async function fetchWithTimeout(url, timeoutMs) {
+  var controller = new AbortController();
+  var timer = setTimeout(function() { controller.abort(); }, timeoutMs || 12000);
+  try {
+    var resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return resp;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
 async function fetchHtmlText(url, origin) {
-  // Strategy: Try CF Worker first (if configured), then Netlify proxy
+  // Try multiple CORS proxies directly from the client browser, then fall back to server proxy
   var endpoints = [];
   if (cfProxyUrl) {
-    endpoints.push(cfProxyUrl + "?url=" + encodeURIComponent(url));
+    endpoints.push({ url: cfProxyUrl + "?url=" + encodeURIComponent(url), json: false });
   }
-  endpoints.push(origin + "/api/proxy?url=" + encodeURIComponent(url));
+  // Client-side CORS proxies (direct, fewer hops)
+  endpoints.push({ url: "https://proxy.corsfix.com/?" + url, json: false });
+  endpoints.push({ url: "https://every-origin.vercel.app/get?url=" + encodeURIComponent(url), json: true });
+  // Server-side proxy as fallback (has its own multi-service retry)
+  endpoints.push({ url: origin + "/api/proxy?url=" + encodeURIComponent(url), json: false });
 
   var lastError = null;
   for (var i = 0; i < endpoints.length; i++) {
     try {
-      var resp = await fetch(endpoints[i]);
+      var resp = await fetchWithTimeout(endpoints[i].url, 12000);
       if (!resp.ok) {
         lastError = new Error("Proxy returned " + resp.status);
         continue;
       }
-      var text = await resp.text();
+      var text;
+      if (endpoints[i].json) {
+        var data = await resp.json();
+        text = data.contents;
+      } else {
+        text = await resp.text();
+      }
       validateHtmlText(text);
       return text;
     } catch (e) {

@@ -73,6 +73,16 @@ async function tryAlloriginsRaw(url: string, mirror: string): Promise<string> {
   return html;
 }
 
+/** Try a transparent CORS proxy (corsfix, CF CORS Anywhere, etc.) */
+async function tryCorsProxy(url: string, proxyUrl: string): Promise<string> {
+  const resp = await fetchWithTimeout(proxyUrl);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const html = await resp.text();
+  const len = html?.length || 0;
+  if (!isValidHtml(html)) throw new Error(`invalid HTML (${len}b)`);
+  return html;
+}
+
 /** Try direct fetch with browser headers */
 async function tryDirect(url: string): Promise<string> {
   const resp = await fetchWithTimeout(url, {
@@ -98,8 +108,9 @@ async function tryDirect(url: string): Promise<string> {
 }
 
 const ALLORIGINS_MIRRORS = [
+  "https://every-origin.vercel.app",
+  "https://everyorigin.jwvbremen.nl",
   "https://api.allorigins.win",
-  "https://api.allorigins.hexlet.app",
 ];
 
 /**
@@ -117,7 +128,9 @@ async function fetchHtmlWithRetry(url: string): Promise<{ html: string | null; d
     // Race all services in parallel for this attempt
     const services: { name: string; fn: () => Promise<string> }[] = [];
     for (const mirror of ALLORIGINS_MIRRORS) {
-      const name = mirror.includes("hexlet") ? "hexlet" : "allorigins";
+      const name = mirror.includes("every-origin") ? "everyorigin"
+        : mirror.includes("jwvbremen") ? "everyorigin-nl"
+        : "allorigins";
       services.push({ name: `${name}/get`, fn: () => tryAlloriginsGet(url, mirror) });
       services.push({ name: `${name}/raw`, fn: () => tryAlloriginsRaw(url, mirror) });
     }

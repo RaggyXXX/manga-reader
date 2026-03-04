@@ -21,23 +21,38 @@ function validateHtmlText(text: string): void {
   }
 }
 
+interface ProxyEndpoint {
+  url: string;
+  json?: boolean;
+}
+
 async function fetchHtml(url: string): Promise<Document> {
-  // Strategy: Try CF Worker first (if configured), then our Netlify proxy
-  const endpoints = [];
+  // Try multiple CORS proxies directly from client, then our server proxy
+  const endpoints: ProxyEndpoint[] = [];
   if (CF_PROXY_URL) {
-    endpoints.push(CF_PROXY_URL + "?url=" + encodeURIComponent(url));
+    endpoints.push({ url: CF_PROXY_URL + "?url=" + encodeURIComponent(url) });
   }
-  endpoints.push(IMAGE_PROXY_BASE + encodeURIComponent(url));
+  // Client-side CORS proxies (direct from browser)
+  endpoints.push({ url: "https://proxy.corsfix.com/?" + url });
+  endpoints.push({ url: "https://every-origin.vercel.app/get?url=" + encodeURIComponent(url), json: true });
+  // Server-side proxy as fallback
+  endpoints.push({ url: IMAGE_PROXY_BASE + encodeURIComponent(url) });
 
   let lastError: Error | null = null;
   for (const endpoint of endpoints) {
     try {
-      const resp = await fetch(endpoint);
+      const resp = await fetch(endpoint.url);
       if (!resp.ok) {
         lastError = new Error(`Proxy returned ${resp.status}`);
         continue;
       }
-      const text = await resp.text();
+      let text: string;
+      if (endpoint.json) {
+        const data = await resp.json();
+        text = data.contents;
+      } else {
+        text = await resp.text();
+      }
       validateHtmlText(text);
       return new DOMParser().parseFromString(text, "text/html");
     } catch (e) {
