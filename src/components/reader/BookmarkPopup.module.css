@@ -1,0 +1,73 @@
+/* ── Overlay ──────────────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ── Popup Card ──────────────────────────────── */
+
+.popup {
+  position: fixed;
+  width: 240px;
+  background: var(--card, #1a1612);
+  border: 1px solid var(--border, #333);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Title ────────────────────────────────────── */
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--foreground, #e8e0d4);
+}
+
+/* ── Input ────────────────────────────────────── */
+
+.input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #333);
+  background: var(--background, #0f0d0a);
+  color: var(--foreground, #e8e0d4);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+/* ── Button Row ──────────────────────────────── */
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.cancelBtn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #333);
+  background: transparent;
+  color: var(--muted-foreground, #8a7e6e);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.saveBtn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary, #b57f44);
+  color: var(--primary-foreground, #fff);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
