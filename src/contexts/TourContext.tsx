@@ -39,66 +39,66 @@ export function useTour() {
 // --- Demo manga injection / cleanup ---
 
 function injectDemoManga() {
-  const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
-  if (seriesMap[DEMO_SLUG]) return; // already exists
-
-  seriesMap[DEMO_SLUG] = {
-    slug: DEMO_SLUG,
-    title: "Tutorial: Example Manga",
-    coverUrl: "/mangablast.png",
-    sourceUrl: "https://example.com/demo-tutorial",
-    totalChapters: 3,
-    addedAt: Date.now(),
-    source: "manhwazone",
-  };
-  localStorage.setItem(SERIES_KEY, JSON.stringify(seriesMap));
-
-  // Add a few demo chapters so the chapter list renders
-  const chaptersMap = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || "{}");
-  chaptersMap[DEMO_SLUG] = {
-    1: { number: 1, title: "Chapter 1: Getting Started", url: "", imageUrls: [], syncedAt: null },
-    2: { number: 2, title: "Chapter 2: Adding Series", url: "", imageUrls: [], syncedAt: null },
-    3: { number: 3, title: "Chapter 3: Reading", url: "", imageUrls: [], syncedAt: null },
-  };
-  localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
-
-  // Inject demo reading progress so stats page shows metrics
   const now = Date.now();
-  const progressMap = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}");
-  if (!progressMap[DEMO_SLUG]) {
-    progressMap[DEMO_SLUG] = {
-      lastReadChapter: 2,
-      readChapters: [1, 2],
-      chapterProgress: {
-        1: { scrollPercent: 100, imageIndex: 12, timestamp: now - 3600000 },
-        2: { scrollPercent: 45, imageIndex: 5, timestamp: now - 600000 },
-      },
+
+  // Series
+  const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
+  if (!seriesMap[DEMO_SLUG]) {
+    seriesMap[DEMO_SLUG] = {
+      slug: DEMO_SLUG,
+      title: "Tutorial: Example Manga",
+      coverUrl: "/mangablast.png",
+      sourceUrl: "https://example.com/demo-tutorial",
+      totalChapters: 3,
+      addedAt: now,
+      source: "manhwazone",
     };
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progressMap));
+    localStorage.setItem(SERIES_KEY, JSON.stringify(seriesMap));
   }
 
-  // Inject demo bookmarks so bookmarks page shows content
-  const bookmarksMap = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || "{}");
-  if (!bookmarksMap[DEMO_SLUG]) {
-    bookmarksMap[DEMO_SLUG] = [
-      {
-        id: "demo-bookmark-1",
-        slug: DEMO_SLUG,
-        chapterNumber: 1,
-        imageIndex: 3,
-        note: "Cool panel!",
-        createdAt: now - 1800000,
-      },
-      {
-        id: "demo-bookmark-2",
-        slug: DEMO_SLUG,
-        chapterNumber: 2,
-        imageIndex: 0,
-        createdAt: now - 300000,
-      },
-    ];
-    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarksMap));
+  // Chapters
+  const chaptersMap = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || "{}");
+  if (!chaptersMap[DEMO_SLUG]) {
+    chaptersMap[DEMO_SLUG] = {
+      1: { number: 1, title: "Chapter 1: Getting Started", url: "", imageUrls: [], syncedAt: null },
+      2: { number: 2, title: "Chapter 2: Adding Series", url: "", imageUrls: [], syncedAt: null },
+      3: { number: 3, title: "Chapter 3: Reading", url: "", imageUrls: [], syncedAt: null },
+    };
+    localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
   }
+
+  // Reading progress (always overwrite to ensure it exists)
+  const progressMap = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}");
+  progressMap[DEMO_SLUG] = {
+    lastReadChapter: 2,
+    readChapters: [1, 2],
+    chapterProgress: {
+      1: { scrollPercent: 100, imageIndex: 12, timestamp: now - 3600000 },
+      2: { scrollPercent: 45, imageIndex: 5, timestamp: now - 600000 },
+    },
+  };
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(progressMap));
+
+  // Bookmarks (always overwrite to ensure they exist)
+  const bookmarksMap = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || "{}");
+  bookmarksMap[DEMO_SLUG] = [
+    {
+      id: "demo-bookmark-1",
+      slug: DEMO_SLUG,
+      chapterNumber: 1,
+      imageIndex: 3,
+      note: "Cool panel!",
+      createdAt: now - 1800000,
+    },
+    {
+      id: "demo-bookmark-2",
+      slug: DEMO_SLUG,
+      chapterNumber: 2,
+      imageIndex: 0,
+      createdAt: now - 300000,
+    },
+  ];
+  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarksMap));
 
   // Notify components to refresh their state from localStorage
   window.dispatchEvent(new Event("tour-storage-updated"));

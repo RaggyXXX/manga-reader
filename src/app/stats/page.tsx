@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { BarChart3, Bookmark as BookmarkIcon, BookOpen, Clock3, Database, Download, HelpCircle, Images } from "lucide-react";
 import { deleteSeries as deleteStoredSeries, getAllSeries, getChapters } from "@/lib/manga-store";
 import { getReadingStats } from "@/lib/reading-progress";
@@ -33,8 +33,16 @@ function formatReadingTime(minutes: number): string {
 
 export default function StatsPage() {
   const { startTour } = useTour();
+  const [, setRefreshKey] = useState(0);
   const stats = getReadingStats();
   const allSeries = getAllSeries();
+
+  // Refresh when tour injects/removes demo data
+  useEffect(() => {
+    const handler = () => setRefreshKey((k) => k + 1);
+    window.addEventListener("tour-storage-updated", handler);
+    return () => window.removeEventListener("tour-storage-updated", handler);
+  }, []);
 
   const seriesList = allSeries.map((s) => ({
     slug: s.slug,

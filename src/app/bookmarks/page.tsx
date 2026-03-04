@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getAllBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmark-store";
 import { getSeries, getChapter } from "@/lib/manga-store";
 import { imageProxyUrl } from "@/lib/scraper";
@@ -13,6 +13,13 @@ export default function BookmarksPage() {
   const [allBookmarks, setAllBookmarks] = useState(() => getAllBookmarks());
   const [filterSlug, setFilterSlug] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
+
+  // Refresh when tour injects/removes demo data
+  useEffect(() => {
+    const handler = () => setAllBookmarks(getAllBookmarks());
+    window.addEventListener("tour-storage-updated", handler);
+    return () => window.removeEventListener("tour-storage-updated", handler);
+  }, []);
 
   // Flatten all bookmarks into a single sorted list
   const flatBookmarks = useMemo(() => {
