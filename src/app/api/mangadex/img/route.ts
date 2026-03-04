@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
         "Content-Type": contentType,
         "Access-Control-Allow-Origin": "*",
         "Cache-Control": "public, max-age=86400, immutable",
+        "CDN-Cache-Control": "no-store",
       },
     });
   } catch (err) {

@@ -35,8 +35,8 @@ export async function GET(req: NextRequest) {
       {
         headers: {
           "Access-Control-Allow-Origin": "*",
-          // Short cache — baseUrl expires after ~15 min
-          "Cache-Control": "public, max-age=600",
+          "Cache-Control": "no-store",
+          "CDN-Cache-Control": "no-store",
         },
       }
     );

@@ -65,7 +65,8 @@ export async function GET(req: NextRequest) {
       {
         headers: {
           "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "public, max-age=300",
+          "Cache-Control": "no-store",
+          "CDN-Cache-Control": "no-store",
         },
       }
     );
