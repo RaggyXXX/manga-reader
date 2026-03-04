@@ -1,4 +1,4 @@
-export type ReadingMode = "vertical" | "page" | "rtl" | "double-page";
+export type ReadingMode = "vertical" | "page" | "rtl" | "double-page" | "panel";
 
 export type ImageFitMode = "fit-width" | "fit-height" | "original" | "fit-screen";
 

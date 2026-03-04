@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Bookmark as BookmarkIcon } from "lucide-react";
+import { addBookmark, getChapterBookmarks, type Bookmark } from "@/lib/bookmark-store";
+import BookmarkPopup from "./BookmarkPopup";
 import styles from "./Reader.module.css";
 import { getReaderSettings, saveReaderSettings } from "@/lib/reader-settings";
 import { markChapterRead } from "@/lib/reading-progress";
@@ -15,6 +17,7 @@ import VerticalReader from "./VerticalReader";
 import PageReader from "./PageReader";
 import RtlReader from "./RtlReader";
 import DoublePageReader from "./DoublePageReader";
+import PanelReader from "./PanelReader";
 import { motionOrInstant } from "@/lib/motion";
 
 /* ── Background colour map ─────────────────────────── */
@@ -47,6 +50,8 @@ export interface ModeProps {
   onTap: () => void;
   nextChapter: number | null;
   onNavigateNext: () => void;
+  onLongPressImage?: (imageIndex: number, x: number, y: number) => void;
+  bookmarkedIndices?: Set<number>;
 }
 
 /* ── Component ──────────────────────────────────────── */
@@ -70,6 +75,8 @@ export default function Reader({
   const [scrollPercent, setScrollPercent] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chapterSliderOpen, setChapterSliderOpen] = useState(false);
+  const [bookmarkPopup, setBookmarkPopup] = useState<{ x: number; y: number; imageIndex: number } | null>(null);
+  const [chapterBookmarks, setChapterBookmarks] = useState<Bookmark[]>([]);
 
   const hideTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -84,6 +91,12 @@ export default function Reader({
 
   useEffect(() => {
     markChapterRead(slug, chapterNumber);
+  }, [slug, chapterNumber]);
+
+  /* ── Load bookmarks for this chapter ─────────── */
+
+  useEffect(() => {
+    setChapterBookmarks(getChapterBookmarks(slug, chapterNumber));
   }, [slug, chapterNumber]);
 
   /* ── Auto-hide bars after idle ─────────────────── */
@@ -134,6 +147,24 @@ export default function Reader({
     [],
   );
 
+  /* ── Bookmark callbacks ─────────────────────────── */
+
+  const handleLongPressImage = useCallback((imageIndex: number, x: number, y: number) => {
+    setBookmarkPopup({ x, y, imageIndex });
+  }, []);
+
+  const handleSaveBookmark = useCallback((note: string) => {
+    if (!bookmarkPopup) return;
+    addBookmark(slug, chapterNumber, bookmarkPopup.imageIndex, note || undefined);
+    setChapterBookmarks(getChapterBookmarks(slug, chapterNumber));
+    setBookmarkPopup(null);
+  }, [bookmarkPopup, slug, chapterNumber]);
+
+  const bookmarkedIndices = useMemo(
+    () => new Set(chapterBookmarks.map(b => b.imageIndex)),
+    [chapterBookmarks]
+  );
+
   /* ── Keyboard shortcuts ────────────────────────── */
 
   useReaderKeyboard({
@@ -174,6 +205,8 @@ export default function Reader({
     onTap: handleTap,
     nextChapter,
     onNavigateNext: handleNavigateNext,
+    onLongPressImage: handleLongPressImage,
+    bookmarkedIndices,
   };
 
   let modeElement: React.ReactNode;
@@ -190,6 +223,9 @@ export default function Reader({
       break;
     case "double-page":
       modeElement = <DoublePageReader {...modeProps} />;
+      break;
+    case "panel":
+      modeElement = <PanelReader {...modeProps} />;
       break;
     default:
       modeElement = <VerticalReader {...modeProps} />;
@@ -260,6 +296,28 @@ export default function Reader({
           className={styles.settingsBtn}
           onClick={(e) => {
             e.stopPropagation();
+            // Visual indicator for bookmarks
+          }}
+          aria-label="Bookmarks"
+          style={{ position: 'relative' }}
+        >
+          <BookmarkIcon className="h-4 w-4" />
+          {chapterBookmarks.length > 0 && (
+            <span style={{
+              position: 'absolute', top: -4, right: -4,
+              background: 'var(--primary, #b57f44)', color: 'white',
+              fontSize: 10, fontWeight: 700, borderRadius: '50%',
+              width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {chapterBookmarks.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          className={styles.settingsBtn}
+          onClick={(e) => {
+            e.stopPropagation();
             setSettingsOpen((v) => !v);
           }}
           aria-label="Settings"
@@ -295,6 +353,16 @@ export default function Reader({
           Next &#8594;
         </button>
       </motion.div>
+
+      {/* Bookmark popup */}
+      {bookmarkPopup && (
+        <BookmarkPopup
+          x={bookmarkPopup.x}
+          y={bookmarkPopup.y}
+          onSave={handleSaveBookmark}
+          onCancel={() => setBookmarkPopup(null)}
+        />
+      )}
 
       {/* Chapter slider overlay */}
       <ChapterSlider
