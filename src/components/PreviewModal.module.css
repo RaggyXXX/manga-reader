@@ -14,10 +14,11 @@
   position: fixed;
   inset: 0;
   z-index: 101;
-  background: var(--bg);
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
   animation: slideUp 0.25s ease;
+  isolation: isolate;
 }
 
 /* Close button */
@@ -383,7 +384,7 @@
   padding: 12px 20px;
   padding-bottom: max(12px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--border-subtle);
-  background: var(--bg);
+  background: var(--bg-primary);
   flex-shrink: 0;
 }
 
