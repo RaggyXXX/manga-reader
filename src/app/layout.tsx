@@ -4,6 +4,7 @@ import "./globals.css";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { ToastProvider } from "@/components/Toast";
 import { SyncProvider } from "@/contexts/SyncContext";
+import { TourProvider } from "@/contexts/TourContext";
 import { SyncProgressBar } from "@/components/SyncProgressBar";
 import { AppShell } from "@/components/layout/AppShell";
 
@@ -53,9 +54,11 @@ export default function RootLayout({
       >
         <SyncProvider>
           <SyncProgressBar />
-          <ToastProvider>
-            <AppShell>{children}</AppShell>
-          </ToastProvider>
+          <TourProvider>
+            <ToastProvider>
+              <AppShell>{children}</AppShell>
+            </ToastProvider>
+          </TourProvider>
         </SyncProvider>
         <ServiceWorkerRegistrar />
       </body>

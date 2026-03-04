@@ -57,10 +57,10 @@ export default function AddSeriesPage() {
 
       <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>
         <TabsList>
-          <TabsTrigger value="search">
+          <TabsTrigger value="search" data-tour="add-search-tab">
             <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Search</span>
           </TabsTrigger>
-          <TabsTrigger value="url">
+          <TabsTrigger value="url" data-tour="add-url-tab">
             <span className="inline-flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL</span>
           </TabsTrigger>
         </TabsList>

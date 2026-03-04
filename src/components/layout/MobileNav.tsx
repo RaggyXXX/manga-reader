@@ -7,9 +7,9 @@ import { BarChart3, BookOpen, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/", label: "Library", icon: BookOpen },
-  { href: "/add", label: "Add", icon: PlusCircle },
-  { href: "/stats", label: "Stats", icon: BarChart3 },
+  { href: "/", label: "Library", icon: BookOpen, tourId: "mobile-library" },
+  { href: "/add", label: "Add", icon: PlusCircle, tourId: "mobile-add" },
+  { href: "/stats", label: "Stats", icon: BarChart3, tourId: "mobile-stats" },
 ];
 
 export function MobileNav() {
@@ -29,6 +29,7 @@ export function MobileNav() {
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
+                data-tour={item.tourId}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative flex items-center justify-center gap-1 overflow-hidden rounded-xl px-3 py-2 text-xs font-semibold transition-colors",

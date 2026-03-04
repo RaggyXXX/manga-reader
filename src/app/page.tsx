@@ -200,7 +200,7 @@ export default function LibraryPage() {
           <p className="mt-2 max-w-sm text-sm text-muted-foreground">
             Add your first series to cache chapters and continue seamlessly across devices.
           </p>
-          <Link href="/add" className="mt-5">
+          <Link href="/add" className="mt-5" data-tour="library-add-empty">
             <Button>
               <Plus className="h-4 w-4" />
               Add Series
@@ -210,7 +210,7 @@ export default function LibraryPage() {
       ) : (
         <section className="space-y-3">
           {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" data-tour="library-toolbar">
             {/* Sort dropdown */}
             <div className="relative">
               <button

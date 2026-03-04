@@ -1,13 +1,14 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { BarChart3, BookOpen, Clock3, Database, Images } from "lucide-react";
+import { BarChart3, BookOpen, Clock3, Database, HelpCircle, Images } from "lucide-react";
 import { deleteSeries as deleteStoredSeries, getAllSeries, getChapters } from "@/lib/manga-store";
 import { getReadingStats } from "@/lib/reading-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
+import { useTour } from "@/contexts/TourContext";
 
 function formatRelativeTime(timestamp: number): string {
   if (!timestamp) return "Unknown";
@@ -30,6 +31,7 @@ function formatReadingTime(minutes: number): string {
 }
 
 export default function StatsPage() {
+  const { startTour } = useTour();
   const stats = getReadingStats();
   const allSeries = getAllSeries();
 
@@ -138,6 +140,19 @@ export default function StatsPage() {
               </Button>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex items-center justify-between p-4">
+          <div>
+            <p className="font-medium">App Tour</p>
+            <p className="text-sm text-muted-foreground">Learn how to use Manga Blast</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={startTour}>
+            <HelpCircle className="mr-1 h-4 w-4" />
+            Start Tour
+          </Button>
         </CardContent>
       </Card>
     </div>

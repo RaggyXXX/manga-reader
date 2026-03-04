@@ -125,7 +125,7 @@ export default function SeriesPage() {
             <div className="space-y-3">
               <div className="flex items-start gap-2">
                 <h1 className="flex-1 text-2xl font-bold tracking-tight">{series.title}</h1>
-                <div className="flex shrink-0 gap-1">
+                <div className="flex shrink-0 gap-1" data-tour="series-share-fav">
                   <button
                     type="button"
                     onClick={handleShare}
@@ -172,6 +172,7 @@ export default function SeriesPage() {
                   size="sm"
                   variant="secondary"
                   type="button"
+                  data-tour="series-sync"
                   onClick={() => (isSyncing ? stopSync() : startSync(slug))}
                 >
                   {isSyncing ? "Stop sync" : "Sync chapters"}
