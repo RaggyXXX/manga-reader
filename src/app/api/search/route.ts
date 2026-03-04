@@ -204,10 +204,11 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json(
-    { results, errors },
+    { query: q, results, errors },
     {
       headers: {
-        "Cache-Control": "public, max-age=300",
+        "Cache-Control": "no-store",
+        "CDN-Cache-Control": "no-store",
       },
     },
   );
