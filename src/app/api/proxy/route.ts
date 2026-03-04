@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Run on Netlify Edge (Deno Deploy) instead of AWS Lambda — different IPs, better Cloudflare compat
+export const runtime = "edge";
+
 const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
 
 // Netlify free tier: 10s function timeout. Each service gets 8s max.
