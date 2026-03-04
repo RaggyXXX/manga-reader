@@ -14,6 +14,9 @@ import { driver, type DriveStep, type Driver } from "driver.js";
 import "driver.js/dist/driver.css";
 
 const TOUR_DONE_KEY = "tour-completed";
+const DEMO_SLUG = "demo-tutorial-manga";
+const SERIES_KEY = "manga-series";
+const CHAPTERS_KEY = "manga-chapters";
 
 interface TourContextValue {
   startTour: () => void;
@@ -29,48 +32,85 @@ export function useTour() {
   return useContext(TourContext);
 }
 
+// --- Demo manga injection / cleanup ---
+
+function injectDemoManga() {
+  const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
+  if (seriesMap[DEMO_SLUG]) return; // already exists
+
+  seriesMap[DEMO_SLUG] = {
+    slug: DEMO_SLUG,
+    title: "Tutorial: Example Manga",
+    coverUrl: "/mangablast.png",
+    sourceUrl: "https://example.com/demo-tutorial",
+    totalChapters: 3,
+    addedAt: Date.now(),
+    source: "mangadex",
+    sourceId: "demo",
+  };
+  localStorage.setItem(SERIES_KEY, JSON.stringify(seriesMap));
+
+  // Add a few demo chapters so the chapter list renders
+  const chaptersMap = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || "{}");
+  chaptersMap[DEMO_SLUG] = {
+    1: { number: 1, title: "Chapter 1: Getting Started", url: "", imageUrls: [], syncedAt: null },
+    2: { number: 2, title: "Chapter 2: Adding Series", url: "", imageUrls: [], syncedAt: null },
+    3: { number: 3, title: "Chapter 3: Reading", url: "", imageUrls: [], syncedAt: null },
+  };
+  localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
+}
+
+function removeDemoManga() {
+  const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
+  delete seriesMap[DEMO_SLUG];
+  localStorage.setItem(SERIES_KEY, JSON.stringify(seriesMap));
+
+  const chaptersMap = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || "{}");
+  delete chaptersMap[DEMO_SLUG];
+  localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
+}
+
+// --- Tour phase definitions ---
+
 interface TourPhase {
   path: string;
   steps: DriveStep[];
 }
 
-function buildTourPhases(hasLibrary: boolean): TourPhase[] {
+function buildTourPhases(): TourPhase[] {
+  // Check if user has real series (not counting demo)
+  const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
+  const realSlugs = Object.keys(seriesMap).filter((s) => s !== DEMO_SLUG);
+  const hasRealLibrary = realSlugs.length > 0;
+
   const phases: TourPhase[] = [];
 
   // Phase 1: Library page
-  if (hasLibrary) {
-    phases.push({
-      path: "/",
-      steps: [
-        {
-          element: '[data-tour="library-toolbar"]',
-          popover: {
-            title: "Filter & Sort",
-            description:
-              "Filter your library by source, status, or favorites. Sort by last read, name, and more.",
-            side: "bottom",
-            align: "start",
+  phases.push({
+    path: "/",
+    steps: hasRealLibrary
+      ? [
+          {
+            element: '[data-tour="library-toolbar"]',
+            popover: {
+              title: "Filter & Sort",
+              description:
+                "Filter your library by source, status, or favorites. Sort by last read, name, and more.",
+              side: "bottom",
+              align: "start",
+            },
           },
-        },
-      ],
-    });
-  } else {
-    phases.push({
-      path: "/",
-      steps: [
-        {
-          element: '[data-tour="library-add-empty"]',
-          popover: {
-            title: "Start Here",
-            description:
-              "Your library is empty. Tap here to add your first manga series!",
-            side: "top",
-            align: "center",
+        ]
+      : [
+          {
+            popover: {
+              title: "Welcome to Manga Blast!",
+              description:
+                "Let's take a quick tour. We've added an example manga so you can see all features in action.",
+            },
           },
-        },
-      ],
-    });
-  }
+        ],
+  });
 
   // Phase 2: Add page
   phases.push({
@@ -99,8 +139,37 @@ function buildTourPhases(hasLibrary: boolean): TourPhase[] {
     ],
   });
 
+  // Phase 3: Series detail (always uses demo manga)
+  phases.push({
+    path: `/series/${DEMO_SLUG}`,
+    steps: [
+      {
+        element: '[data-tour="series-sync"]',
+        popover: {
+          title: "Sync Chapters",
+          description:
+            "Download chapter data for offline reading. Syncs run in the background.",
+          side: "bottom",
+          align: "start",
+        },
+      },
+      {
+        element: '[data-tour="series-share-fav"]',
+        popover: {
+          title: "Share & Favorite",
+          description:
+            "Share this series with friends or mark it as a favorite for quick access.",
+          side: "bottom",
+          align: "end",
+        },
+      },
+    ],
+  });
+
   return phases;
 }
+
+// --- Provider ---
 
 export function TourProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -111,8 +180,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const phaseIndexRef = useRef(0);
   const awaitingNavRef = useRef(false);
   const activeRef = useRef(false);
+  const demoInjectedRef = useRef(false);
 
-  // Keep activeRef in sync
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
@@ -124,7 +193,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
     activeRef.current = false;
     phaseIndexRef.current = 0;
     awaitingNavRef.current = false;
-  }, []);
+
+    // Remove demo manga and navigate to library
+    if (demoInjectedRef.current) {
+      removeDemoManga();
+      demoInjectedRef.current = false;
+      router.push("/");
+    }
+  }, [router]);
 
   const advanceToNextPhase = useCallback(
     (currentPhaseIdx: number) => {
@@ -132,7 +208,6 @@ export function TourProvider({ children }: { children: ReactNode }) {
       const nextIdx = currentPhaseIdx + 1;
 
       if (nextIdx >= phases.length) {
-        // Tour complete
         localStorage.setItem(TOUR_DONE_KEY, "true");
         cleanup();
         return;
@@ -157,7 +232,6 @@ export function TourProvider({ children }: { children: ReactNode }) {
       const phase = phases[phaseIdx];
       phaseIndexRef.current = phaseIdx;
 
-      // Destroy previous driver instance
       if (driverRef.current) {
         driverRef.current.destroy();
         driverRef.current = null;
@@ -182,7 +256,6 @@ export function TourProvider({ children }: { children: ReactNode }) {
           if (!d) return;
 
           if (!d.hasNextStep()) {
-            // Completed all steps in this phase
             d.destroy();
             advanceToNextPhase(phaseIdx);
           } else {
@@ -194,7 +267,6 @@ export function TourProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      // Delay to let DOM render target elements
       setTimeout(() => {
         driverRef.current?.drive();
       }, 400);
@@ -228,51 +300,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startTourInternal = useCallback(() => {
-    // Check if library has series
-    const raw = localStorage.getItem("manga-series");
-    const hasLibrary =
-      !!raw && Object.keys(JSON.parse(raw || "{}")).length > 0;
+    // Inject demo manga so all steps are available
+    injectDemoManga();
+    demoInjectedRef.current = true;
 
-    const phases = buildTourPhases(hasLibrary);
-
-    // If library has series, add a series detail phase
-    if (hasLibrary) {
-      const seriesMap = JSON.parse(raw || "{}");
-      const firstSlug = Object.keys(seriesMap)[0];
-      if (firstSlug) {
-        phases.push({
-          path: `/series/${firstSlug}`,
-          steps: [
-            {
-              element: '[data-tour="series-sync"]',
-              popover: {
-                title: "Sync Chapters",
-                description:
-                  "Download chapter data for offline reading. Syncs run in the background.",
-                side: "bottom",
-                align: "start",
-              },
-            },
-            {
-              element: '[data-tour="series-share-fav"]',
-              popover: {
-                title: "Share & Favorite",
-                description:
-                  "Share this series with friends or mark it as a favorite for quick access.",
-                side: "bottom",
-                align: "end",
-              },
-            },
-          ],
-        });
-      }
-    }
-
+    const phases = buildTourPhases();
     phasesRef.current = phases;
     phaseIndexRef.current = 0;
     setActive(true);
 
-    // Navigate to first phase page if needed
     if (pathname !== phases[0].path) {
       awaitingNavRef.current = true;
       router.push(phases[0].path);
