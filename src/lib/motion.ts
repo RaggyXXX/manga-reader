@@ -16,7 +16,7 @@ export const fadeUpVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: motionTransition },
 };
 
-export function motionOrInstant(reduced: boolean, duration = motionDurations.base): Transition {
+export function motionOrInstant(reduced: boolean, duration: number = motionDurations.base): Transition {
   if (reduced) {
     return { duration: 0 };
   }
