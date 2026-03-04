@@ -1,14 +1,16 @@
 import type { Transition, Variants } from "framer-motion";
 
 export const motionDurations = {
-  fast: 0.16,
-  base: 0.24,
-  slow: 0.34,
+  fast: 0.14,
+  base: 0.22,
+  slow: 0.32,
 } as const;
+
+export const cozyEase = [0.22, 0.8, 0.2, 1] as const;
 
 export const motionTransition: Transition = {
   duration: motionDurations.base,
-  ease: [0.2, 0.8, 0.2, 1],
+  ease: cozyEase,
 };
 
 export const fadeUpVariants: Variants = {
@@ -20,5 +22,5 @@ export function motionOrInstant(reduced: boolean, duration: number = motionDurat
   if (reduced) {
     return { duration: 0 };
   }
-  return { duration, ease: [0.2, 0.8, 0.2, 1] };
+  return { duration, ease: cozyEase };
 }

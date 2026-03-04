@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import { BarChart3, BookOpen, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,15 +29,23 @@ export function MobileNav() {
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
+                  "relative flex items-center justify-center gap-1 overflow-hidden rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
-                <span>{item.label}</span>
+                {active ? (
+                  <motion.span
+                    layoutId="mobile-nav-active"
+                    className="absolute inset-0 rounded-xl bg-primary"
+                    transition={{ duration: 0.22, ease: [0.22, 0.8, 0.2, 1] }}
+                  />
+                ) : null}
+                <Icon className="relative z-10 h-4 w-4" />
+                <span className="relative z-10">{item.label}</span>
               </Link>
             </li>
           );

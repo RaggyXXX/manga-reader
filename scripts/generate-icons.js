@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Generate PWA PNG icons for manga-reader.
  * Pure Node.js — no external dependencies.

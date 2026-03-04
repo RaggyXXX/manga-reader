@@ -95,6 +95,28 @@ export default function ReaderSettingsDrawer({
     [settings, onSettingsChange],
   );
 
+  const applyPreset = useCallback(
+    (preset: "cozy-day" | "night-read") => {
+      if (preset === "cozy-day") {
+        onSettingsChange({
+          ...settings,
+          background: "sepia",
+          brightness: 1.05,
+          imageFitMode: "fit-width",
+        });
+        return;
+      }
+
+      onSettingsChange({
+        ...settings,
+        background: "dark",
+        brightness: 0.85,
+        imageFitMode: "fit-width",
+      });
+    },
+    [onSettingsChange, settings],
+  );
+
   /* ── Close on Escape ───────────────────────── */
 
   useEffect(() => {
@@ -154,6 +176,18 @@ export default function ReaderSettingsDrawer({
         {/* Drag handle (decorative) */}
         <div className={styles.dragHandle}>
           <div className={styles.dragPill} />
+        </div>
+
+        <div className={styles.section}>
+          <div className={styles.sectionLabel}>Presets</div>
+          <div className={styles.pillRow}>
+            <button className={styles.pill} onClick={() => applyPreset("cozy-day")} type="button">
+              Cozy Day
+            </button>
+            <button className={styles.pill} onClick={() => applyPreset("night-read")} type="button">
+              Night Read
+            </button>
+          </div>
         </div>
 
         {/* ── Section 1: Lesemodus ─────────────── */}

@@ -2,16 +2,34 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { BarChart3, PlusCircle } from "lucide-react";
+import { BarChart3, Moon, PlusCircle, Sun } from "lucide-react";
 import { MobileNav } from "./MobileNav";
 import { cn } from "@/lib/utils";
 import { fadeUpVariants, motionOrInstant } from "@/lib/motion";
+import { applyThemeClass, resolveInitialTheme, THEME_STORAGE_KEY, type ThemeMode } from "@/lib/theme";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isReaderRoute = pathname.startsWith("/read/");
   const reduced = useReducedMotion();
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    const saved = (localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null) ?? null;
+    return resolveInitialTheme(saved, window.matchMedia("(prefers-color-scheme: dark)").matches);
+  });
+
+  useEffect(() => {
+    applyThemeClass(theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    applyThemeClass(next);
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+  };
 
   if (isReaderRoute) {
     return <div data-testid="app-shell">{children}</div>;
@@ -25,6 +43,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Manga Reader
           </Link>
           <div className="hidden items-center gap-2 md:flex">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="inline-flex items-center gap-2 rounded-lg border border-border/70 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Theme wechseln"
+              title="Theme wechseln"
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              Theme
+            </button>
             <Link
               href="/add"
               className={cn(
@@ -50,6 +78,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Stats
             </Link>
           </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="inline-flex items-center gap-2 rounded-lg border border-border/70 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+            aria-label="Theme wechseln"
+            title="Theme wechseln"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
         </div>
       </header>
       <motion.main

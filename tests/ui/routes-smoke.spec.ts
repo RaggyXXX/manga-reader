@@ -57,9 +57,23 @@ test("home route renders", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /manga reader/i })).toBeVisible();
 });
 
+test("theme toggle persists preference", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /theme/i }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.reload();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+});
+
 test("add route renders", async ({ page }) => {
   await page.goto("/add");
   await expect(page.getByRole("heading", { name: /serie hinzufuegen/i })).toBeVisible();
+});
+
+test("add page exposes search and url tabs", async ({ page }) => {
+  await page.goto("/add");
+  await expect(page.getByRole("tab", { name: /suche/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /url/i })).toBeVisible();
 });
 
 test("stats route renders", async ({ page }) => {
@@ -70,4 +84,15 @@ test("stats route renders", async ({ page }) => {
 test("series route renders", async ({ page }) => {
   await page.goto("/series/smoke-series");
   await expect(page.getByRole("heading", { name: /smoke series/i }).first()).toBeVisible();
+});
+
+test("mobile nav marks active destination", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/add");
+  await expect(page.getByRole("link", { name: /^add$/i })).toHaveAttribute("aria-current", "page");
+});
+
+test("series page shows quick continue action", async ({ page }) => {
+  await page.goto("/series/smoke-series");
+  await expect(page.getByRole("link", { name: /weiterlesen/i })).toBeVisible();
 });

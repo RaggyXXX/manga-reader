@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BookOpenCheck, CloudDownload } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, CloudDownload, Play } from "lucide-react";
 import { getChapters, getSeries } from "@/lib/manga-store";
 import { imageProxyUrl } from "@/lib/scraper";
 import { ChapterList } from "@/components/ChapterList";
@@ -41,6 +41,7 @@ export default function SeriesPage() {
   }
 
   const syncedCount = chapters.filter((ch) => ch.imageUrls.length > 0).length;
+  const continueChapter = chapters.length > 0 ? chapters[0].number : null;
   const chaptersPlain = chapters.map((ch) => ({
     number: ch.number,
     title: ch.title,
@@ -87,6 +88,19 @@ export default function SeriesPage() {
                   {syncedCount} bereit
                 </Badge>
                 {isSyncing ? <Badge>Sync laeuft</Badge> : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {continueChapter != null ? (
+                  <Link href={`/read/${slug}/${continueChapter}`}>
+                    <Button size="sm">
+                      <Play className="mr-1 h-4 w-4" />
+                      Weiterlesen
+                    </Button>
+                  </Link>
+                ) : null}
+                <Button size="sm" variant="secondary">
+                  {isSyncing ? "Synchronisierung laeuft..." : "Kapitel synchronisieren"}
+                </Button>
               </div>
               <p className="text-sm text-muted-foreground">
                 Kapitelverwaltung und Lesefortschritt sind komplett lokal. Die Reader-Funktionalitaet bleibt unveraendert.

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SearchResult {
   title: string;
@@ -56,28 +57,22 @@ export default function AddSeriesPage() {
         </Link>
       </header>
 
-      <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-card p-1">
-        <button
-          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-            mode === "search" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-          }`}
-          onClick={() => setMode("search")}
-          type="button"
-        >
-          <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Suche</span>
-        </button>
-        <button
-          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-            mode === "url" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-          }`}
-          onClick={() => setMode("url")}
-          type="button"
-        >
-          <span className="inline-flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL</span>
-        </button>
-      </div>
-
-      {mode === "search" ? <SearchMode router={router} /> : <UrlMode router={router} />}
+      <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>
+        <TabsList>
+          <TabsTrigger value="search">
+            <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Suche</span>
+          </TabsTrigger>
+          <TabsTrigger value="url">
+            <span className="inline-flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL</span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="search">
+          <SearchMode router={router} />
+        </TabsContent>
+        <TabsContent value="url">
+          <UrlMode router={router} />
+        </TabsContent>
+      </Tabs>
 
       <Card>
         <CardContent className="p-4">
@@ -235,7 +230,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="sticky top-[4.25rem] z-20 -mx-1 flex flex-wrap gap-2 rounded-xl border border-border/70 bg-card/95 px-1 py-1 backdrop-blur">
             {SOURCE_FILTERS.map((sf) => (
               <button
                 key={sf.key}
