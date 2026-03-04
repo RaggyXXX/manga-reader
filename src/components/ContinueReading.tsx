@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getProgress, type SeriesProgress } from "@/lib/reading-progress";
 import { imageProxyUrl } from "@/lib/scraper";
+import type { MangaSource } from "@/lib/manga-store";
 import styles from "./ContinueReading.module.css";
 
 interface SeriesInfo {
@@ -11,6 +12,7 @@ interface SeriesInfo {
   title: string;
   coverUrl: string;
   totalChapters: number;
+  source?: MangaSource;
 }
 
 interface ContinueReadingItem {
@@ -20,6 +22,7 @@ interface ContinueReadingItem {
   lastReadChapter: number;
   scrollPercent: number;
   totalChapters: number;
+  source?: MangaSource;
 }
 
 interface ContinueReadingProps {
@@ -52,6 +55,7 @@ export function ContinueReading({ series }: ContinueReadingProps) {
         lastReadChapter: progress.lastReadChapter,
         scrollPercent,
         totalChapters: s.totalChapters,
+        source: s.source,
       });
     }
 
@@ -81,7 +85,7 @@ export function ContinueReading({ series }: ContinueReadingProps) {
               : 0;
 
           const coverSrc = item.coverUrl
-            ? imageProxyUrl(item.coverUrl)
+            ? imageProxyUrl(item.coverUrl, item.source)
             : undefined;
 
           return (

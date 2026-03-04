@@ -5,12 +5,14 @@ import styles from "./SeriesCard.module.css";
 import { useEffect, useState } from "react";
 import { getReadChapters } from "@/lib/reading-progress";
 import { imageProxyUrl } from "@/lib/scraper";
+import type { MangaSource } from "@/lib/manga-store";
 
 interface SeriesCardProps {
   slug: string;
   title: string;
   coverUrl?: string;
   totalChapters: number;
+  source?: MangaSource;
 }
 
 export function SeriesCard({
@@ -18,6 +20,7 @@ export function SeriesCard({
   title,
   coverUrl,
   totalChapters,
+  source,
 }: SeriesCardProps) {
   const [readCount, setReadCount] = useState(0);
 
@@ -33,7 +36,7 @@ export function SeriesCard({
         {/* Cover image or placeholder */}
         {coverUrl ? (
           <img
-            src={imageProxyUrl(coverUrl)}
+            src={imageProxyUrl(coverUrl, source)}
             alt={title}
             className={styles.cover}
             loading="lazy"

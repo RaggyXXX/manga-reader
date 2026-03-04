@@ -9,6 +9,15 @@ const ALLOWED_HOSTS = [
   "c4.manhwatop.com",
   "media.manhwazone.to",
   "official.lowee.us",
+  "mangakatana.com",
+  "www.mangakatana.com",
+  "i1.mangakatana.com",
+  "i2.mangakatana.com",
+  "i3.mangakatana.com",
+  "vymanga.com",
+  "www.vymanga.com",
+  "cdnxyz.xyz",
+  "vycdn.net",
 ];
 
 // Chrome-like cipher suite order — key to bypassing Cloudflare TLS fingerprinting
@@ -22,11 +31,21 @@ const CHROME_CIPHERS = [
   "ECDHE-RSA-AES256-GCM-SHA384",
 ].join(":");
 
+function getRefererForHost(hostname: string): string {
+  if (hostname.includes("manhwatop.com") || hostname.includes("manhwazone.to")) return "https://manhwazone.to/";
+  if (hostname.includes("mangakatana.com")) return "https://mangakatana.com/";
+  if (hostname.includes("vymanga.com") || hostname.includes("cdnxyz.xyz") || hostname.includes("vycdn.net")) return "https://vymanga.com/";
+  return "";
+}
+
 async function fetchWithH2(url: string, isImage: boolean): Promise<{ body: string; contentType: string }> {
   const gotModule = await import("got");
   const h2Module = await import("http2-wrapper");
   const got = gotModule.default;
   const h2auto = h2Module.default.auto;
+
+  const hostname = new URL(url).hostname;
+  const referer = isImage ? getRefererForHost(hostname) : "";
 
   const instance = got.extend({
     // @ts-expect-error http2-wrapper type mismatch with got's RequestFunction
@@ -46,7 +65,7 @@ async function fetchWithH2(url: string, isImage: boolean): Promise<{ body: strin
         : "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9",
       "Accept-Encoding": "gzip, deflate, br",
-      Referer: isImage ? "https://manhwazone.to/" : "",
+      Referer: referer,
       "Sec-CH-UA": '"Chromium";v="131", "Not_A Brand";v="24"',
       "Sec-CH-UA-Mobile": "?0",
       "Sec-CH-UA-Platform": '"Windows"',

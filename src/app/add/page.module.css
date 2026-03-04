@@ -160,3 +160,69 @@
   font-style: italic;
   line-height: 1.5;
 }
+
+/* ── Supported sources ── */
+.sources {
+  max-width: 500px;
+  margin: 0 auto 32px;
+  padding: 0 20px;
+}
+
+@media (max-width: 540px) {
+  .sources {
+    margin: 0 16px 32px;
+    padding: 0;
+  }
+}
+
+.sourcesTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.sourcesList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sourceItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  transition: border-color var(--transition-fast);
+}
+
+.sourceItem:hover {
+  border-color: var(--border);
+}
+
+.sourceDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sourceName {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.sourceDomain {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}

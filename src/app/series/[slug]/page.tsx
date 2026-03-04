@@ -78,7 +78,7 @@ export default function SeriesPage() {
       <div className={styles.infoCard}>
         {series.coverUrl ? (
           <img
-            src={imageProxyUrl(series.coverUrl)}
+            src={imageProxyUrl(series.coverUrl, series.source)}
             alt={series.title}
             className={styles.cover}
             referrerPolicy="no-referrer"

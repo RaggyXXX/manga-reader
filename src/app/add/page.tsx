@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import Link from "next/link";
-import { discoverSeries } from "@/lib/scraper";
+import { discoverSeries, detectSource } from "@/lib/scraper";
 import { saveSeries } from "@/lib/manga-store";
 
 export default function AddSeriesPage() {
@@ -21,7 +21,16 @@ export default function AddSeriesPage() {
     setError(null);
 
     try {
-      const discovered = await discoverSeries(url.trim());
+      const trimmedUrl = url.trim();
+      const source = detectSource(trimmedUrl);
+      const supported = ["manhwazone", "mangadex", "mangakatana", "vymanga"];
+      if (!supported.includes(source)) {
+        setError("Nicht unterstuetzte Seite. Unterstuetzt: MangaDex, MangaKatana, VyManga, Manhwazone");
+        setLoading(false);
+        return;
+      }
+
+      const discovered = await discoverSeries(trimmedUrl);
 
       const slug = discovered.title
         .toLowerCase()
@@ -35,6 +44,8 @@ export default function AddSeriesPage() {
         sourceUrl: discovered.sourceUrl,
         totalChapters: 0,
         addedAt: Date.now(),
+        source: discovered.source,
+        sourceId: discovered.sourceId,
       });
 
       router.push(`/series/${slug}`);
@@ -70,12 +81,12 @@ export default function AddSeriesPage() {
       {/* Form card */}
       <form onSubmit={handleSubmit} className={styles.form}>
         <label className={styles.label}>
-          Manhwazone URL
+          Manga URL
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://manhwazone.to/series/..."
+            placeholder="https://mangadex.org/title/... oder manhwazone.to/series/..."
             className={styles.input}
             disabled={loading}
             autoFocus
@@ -114,6 +125,27 @@ export default function AddSeriesPage() {
           </p>
         )}
       </form>
+
+      {/* Supported sources */}
+      <div className={styles.sources}>
+        <h2 className={styles.sourcesTitle}>Unterstuetzte Quellen</h2>
+        <div className={styles.sourcesList}>
+          {[
+            { name: "MangaDex", domain: "mangadex.org", color: "#ff6740" },
+            { name: "MangaKatana", domain: "mangakatana.com", color: "#4a90d9" },
+            { name: "VyManga", domain: "vymanga.com", color: "#6bc95b" },
+            { name: "Manhwazone", domain: "manhwazone.to", color: "#e8a849" },
+          ].map((s) => (
+            <div key={s.name} className={styles.sourceItem}>
+              <span className={styles.sourceDot} style={{ background: s.color }} />
+              <div>
+                <span className={styles.sourceName}>{s.name}</span>
+                <span className={styles.sourceDomain}>{s.domain}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

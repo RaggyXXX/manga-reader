@@ -95,6 +95,7 @@ export default function LibraryPage() {
             title: s.title,
             coverUrl: s.coverUrl || "",
             totalChapters: s.totalChapters,
+            source: s.source,
           }))}
         />
       )}
@@ -167,6 +168,7 @@ export default function LibraryPage() {
               title={s.title}
               coverUrl={s.coverUrl}
               totalChapters={s.totalChapters}
+              source={s.source}
             />
           ))}
         </div>

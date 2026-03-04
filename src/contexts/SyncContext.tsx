@@ -70,6 +70,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const sendWorkerScrapeStart = useCallback((slug: string) => {
+    const series = getSeries(slug);
     const allChapters = getChapters(slug);
     const unsynced = allChapters.filter((ch) => ch.imageUrls.length === 0);
     const alreadySynced = allChapters.length - unsynced.length;
@@ -79,6 +80,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         type: "start",
         slug,
         seriesUrl: null,
+        source: series?.source || "manhwazone",
+        sourceId: series?.sourceId,
         unsyncedChapters: unsynced.map((ch) => ({
           number: ch.number,
           title: ch.title,
@@ -234,6 +237,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           type: "start",
           slug,
           seriesUrl: series.sourceUrl,
+          source: series.source || "manhwazone",
+          sourceId: series.sourceId,
           unsyncedChapters: [],
           alreadySyncedCount: 0,
           totalKnown: 0,
@@ -258,6 +263,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           type: "start",
           slug,
           seriesUrl: null,
+          source: series.source || "manhwazone",
+          sourceId: series.sourceId,
           unsyncedChapters: unsynced.map((ch) => ({
             number: ch.number,
             title: ch.title,

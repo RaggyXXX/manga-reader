@@ -1,6 +1,8 @@
 const SERIES_KEY = "manga-series";
 const CHAPTERS_KEY = "manga-chapters";
 
+export type MangaSource = "manhwazone" | "mangadex" | "mangakatana" | "vymanga";
+
 export interface StoredSeries {
   slug: string;
   title: string;
@@ -8,6 +10,8 @@ export interface StoredSeries {
   sourceUrl: string;
   totalChapters: number;
   addedAt: number;
+  source?: MangaSource;
+  sourceId?: string;
 }
 
 export interface StoredChapter {

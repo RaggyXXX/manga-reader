@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // Edge runtime: 30s timeout on Netlify (vs 10s for regular functions)
 export const runtime = "edge";
 
-const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us"];
+const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us", "mangakatana.com", "www.mangakatana.com", "i1.mangakatana.com", "i2.mangakatana.com", "i3.mangakatana.com", "vymanga.com", "www.vymanga.com", "cdnxyz.xyz", "vycdn.net"];
 
 const FETCH_TIMEOUT = 12000;
 

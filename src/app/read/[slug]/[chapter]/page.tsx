@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Reader from "@/components/reader/Reader";
-import { getChapters, getChapter, saveChapter } from "@/lib/manga-store";
-import { scrapeChapterImages } from "@/lib/scraper";
+import { getChapters, getChapter, saveChapter, getSeries } from "@/lib/manga-store";
+import { scrapeChapterImages, imageProxyUrl } from "@/lib/scraper";
 import styles from "./page.module.css";
 
 export default function ReaderPage() {
@@ -39,19 +39,25 @@ export default function ReaderPage() {
 
     setChapterTitle(ch.title);
 
-    // Already synced — show immediately
-    if (ch.imageUrls.length > 0) {
-      setImageUrls(ch.imageUrls);
+    const series = getSeries(slug);
+    const source = series?.source || "manhwazone";
+
+    // For MangaDex, re-fetch image URLs if syncedAt is older than 10 min (URLs expire)
+    const needsRefresh = source === "mangadex" && ch.imageUrls.length > 0 && ch.syncedAt && (Date.now() - ch.syncedAt > 10 * 60 * 1000);
+
+    // Already synced (and not expired) — show immediately
+    if (ch.imageUrls.length > 0 && !needsRefresh) {
+      setImageUrls(ch.imageUrls.map((u) => imageProxyUrl(u, source)));
       setLoading(false);
       return;
     }
 
-    // Not synced — scrape on-demand
+    // Not synced or needs refresh — scrape on-demand
     try {
-      const images = await scrapeChapterImages(ch.url);
+      const images = await scrapeChapterImages(ch.url, source);
       if (images.length > 0) {
         saveChapter(slug, { ...ch, imageUrls: images, syncedAt: Date.now() });
-        setImageUrls(images);
+        setImageUrls(images.map((u) => imageProxyUrl(u, source)));
       } else {
         setError("Keine Bilder gefunden.");
       }
