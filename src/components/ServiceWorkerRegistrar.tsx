@@ -74,14 +74,24 @@ export function ServiceWorkerRegistrar() {
   if (!updateAvailable) return null;
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-[200] flex items-center justify-between gap-3 bg-amber-600 px-4 py-3 text-sm font-semibold text-white shadow-lg">
-      <span>Neue Version verfügbar!</span>
-      <button
-        onClick={applyUpdate}
-        className="shrink-0 rounded-lg bg-white px-4 py-1.5 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-50 active:bg-amber-100"
-      >
-        Update
-      </button>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-sm rounded-2xl bg-card p-6 text-center shadow-2xl">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-3xl">
+          🔄
+        </div>
+        <h2 className="mb-2 text-lg font-bold text-card-foreground">
+          Update verfügbar
+        </h2>
+        <p className="mb-6 text-sm text-muted-foreground">
+          Eine neue Version von Manga Blast ist verfügbar. Bitte aktualisiere, um die neuesten Verbesserungen zu erhalten.
+        </p>
+        <button
+          onClick={applyUpdate}
+          className="w-full rounded-xl bg-amber-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-amber-700 active:bg-amber-800"
+        >
+          Jetzt aktualisieren
+        </button>
+      </div>
     </div>
   );
 }
