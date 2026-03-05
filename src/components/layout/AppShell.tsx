@@ -50,8 +50,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div data-testid="app-shell" className="min-h-dvh bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur" role="banner">
-        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4">
+      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur" role="banner" style={{ paddingTop: "var(--sat)" }}>
+        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4" style={{ paddingLeft: "max(1rem, var(--sal))", paddingRight: "max(1rem, var(--sar))" }}>
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <picture>
@@ -122,7 +122,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         initial="hidden"
         animate="visible"
         transition={motionOrInstant(!!reduced)}
-        className="mx-auto w-full max-w-5xl px-4 pb-24 pt-6 md:pb-8"
+        className="mx-auto w-full max-w-5xl px-4 pt-6 md:pb-8"
+        style={{ paddingBottom: "calc(6rem + var(--sab))", paddingLeft: "max(1rem, var(--sal))", paddingRight: "max(1rem, var(--sar))" }}
       >
         {children}
       </motion.main>

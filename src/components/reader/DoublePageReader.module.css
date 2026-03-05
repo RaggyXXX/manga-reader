@@ -137,7 +137,7 @@
 /* Page counter overlay */
 .pageCounter {
   position: absolute;
-  bottom: 12px;
+  bottom: calc(12px + var(--sab, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;

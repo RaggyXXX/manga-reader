@@ -39,7 +39,7 @@ export function BatchActionBar({ count, onCancel, onDelete, onFavorite, onStatus
   }, [showStatus]);
 
   return (
-    <div className="fixed inset-x-0 bottom-16 z-50 flex items-center justify-between gap-2 border-t border-border bg-card px-4 py-3 shadow-lg md:bottom-0">
+    <div className="fixed inset-x-0 z-50 flex items-center justify-between gap-2 border-t border-border bg-card px-4 py-3 shadow-lg md:bottom-0" style={{ bottom: "calc(4rem + var(--sab, 0px))" }}>
       <div className="flex items-center gap-3">
         <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted">
           <X className="h-5 w-5" />

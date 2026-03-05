@@ -18,6 +18,7 @@ export function MobileNav() {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-card/95 px-3 py-2 backdrop-blur md:hidden"
+      style={{ paddingBottom: "calc(0.5rem + var(--sab))", paddingLeft: "max(0.75rem, var(--sal))", paddingRight: "max(0.75rem, var(--sar))" }}
       aria-label="Primary"
     >
       <ul className="mx-auto flex max-w-xl items-center justify-between gap-2">

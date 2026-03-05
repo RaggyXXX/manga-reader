@@ -243,7 +243,8 @@ export default function SeriesPage() {
 
       {/* Fixed bottom sync bar — flush above mobile nav, same full width */}
       <div
-        className={`fixed inset-x-0 bottom-[49px] z-40 border-t md:relative md:bottom-auto md:mt-4 md:rounded-xl md:border-t-0 ${
+        style={{ bottom: "calc(49px + var(--sab, 0px))" }}
+        className={`fixed inset-x-0 z-40 border-t md:relative md:!bottom-auto md:mt-4 md:rounded-xl md:border-t-0 ${
           btn.enabled
             ? "border-primary/30 bg-primary text-primary-foreground"
             : "border-border/40 bg-muted/80 text-muted-foreground"

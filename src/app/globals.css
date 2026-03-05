@@ -113,6 +113,11 @@
   html,
   body {
     @apply min-h-full bg-background text-foreground;
+    /* PWA safe area insets — used by header, nav, content */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
   }
 
   body {
