@@ -1,3 +1,4 @@
+const SW_VERSION = "dev";
 const CACHE_NAME = "manga-blast-v1";
 const IMG_CACHE = "manga-images-v2";
 const API_CACHE = "manga-api-v2";
@@ -7,7 +8,7 @@ const MAX_IMG_CACHE = 2000;
 const MAX_COVER_CACHE = 200;
 
 self.addEventListener("install", () => {
-  self.skipWaiting();
+  // Do NOT skipWaiting here — let the client decide when to activate
 });
 
 self.addEventListener("activate", (event) => {
@@ -22,6 +23,16 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+// Listen for skip-waiting message from the client
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+  if (event.data === "GET_VERSION") {
+    event.source.postMessage({ type: "SW_VERSION", version: SW_VERSION });
+  }
 });
 
 // LRU eviction for image cache
