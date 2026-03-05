@@ -76,20 +76,22 @@ export function ServiceWorkerRegistrar() {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="mx-4 w-full max-w-sm rounded-2xl bg-card p-6 text-center shadow-2xl">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-3xl">
-          🔄
-        </div>
-        <h2 className="mb-2 text-lg font-bold text-card-foreground">
-          Update verfügbar
+        <img
+          src="/mangablast.webp"
+          alt="Manga Blast"
+          className="mx-auto mb-4 h-20 w-20 rounded-2xl"
+        />
+        <h2 className="mb-1.5 text-lg font-bold text-card-foreground">
+          Manga Blast got an update for you
         </h2>
-        <p className="mb-6 text-sm text-muted-foreground">
-          Eine neue Version von Manga Blast ist verfügbar. Bitte aktualisiere, um die neuesten Verbesserungen zu erhalten.
+        <p className="mb-4 text-sm text-muted-foreground">
+          Tap below to load the latest version.
         </p>
         <button
           onClick={applyUpdate}
           className="w-full rounded-xl bg-amber-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-amber-700 active:bg-amber-800"
         >
-          Jetzt aktualisieren
+          Update now
         </button>
       </div>
     </div>
