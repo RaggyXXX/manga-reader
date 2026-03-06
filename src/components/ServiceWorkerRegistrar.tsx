@@ -25,13 +25,16 @@ export function ServiceWorkerRegistrar() {
     });
 
     navigator.serviceWorker
-      .register("/sw.js", { scope: "/" })
+      .register("/sw.js", { scope: "/", updateViaCache: "none" })
       .then((registration) => {
         // If there's already a waiting worker on load
         if (registration.waiting) {
           setWaitingWorker(registration.waiting);
           setUpdateAvailable(true);
         }
+
+        // Check for updates immediately on every page load
+        registration.update();
 
         // Detect when a new SW is installed and waiting
         registration.addEventListener("updatefound", () => {
@@ -50,12 +53,23 @@ export function ServiceWorkerRegistrar() {
           });
         });
 
-        // Periodically check for updates (every 60 minutes)
+        // Also check for updates when the app becomes visible again (PWA reopen)
+        const onVisibilityChange = () => {
+          if (document.visibilityState === "visible") {
+            registration.update();
+          }
+        };
+        document.addEventListener("visibilitychange", onVisibilityChange);
+
+        // Periodically check for updates (every 30 minutes)
         const interval = setInterval(() => {
           registration.update();
-        }, 60 * 60 * 1000);
+        }, 30 * 60 * 1000);
 
-        return () => clearInterval(interval);
+        return () => {
+          clearInterval(interval);
+          document.removeEventListener("visibilitychange", onVisibilityChange);
+        };
       })
       .catch(() => {
         // SW registration failed — likely not HTTPS in dev
