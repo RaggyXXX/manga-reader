@@ -409,9 +409,7 @@ async function previewWeebCentral(sourceUrl: string, sourceId: string): Promise<
   const meta = emptyMeta();
   meta.availableLanguages = ["en"];
 
-  const resp = await fetch(sourceUrl);
-  if (!resp.ok) throw new Error(`WeebCentral ${resp.status}`);
-  const html = await resp.text();
+  const { body: html } = await fetchWithH2(sourceUrl, false);
 
   // Title from <h1>
   const h1 = html.match(/<h1[^>]*>([^<]+)</);

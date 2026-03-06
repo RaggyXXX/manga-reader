@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchWithH2 } from "@/lib/server/fetch-h2";
+import { fetchWithH2, postWithH2 } from "@/lib/server/fetch-h2";
 
 // Node.js runtime (not edge) — needs got + http2-wrapper for Manhwazone
 
@@ -158,16 +158,11 @@ async function searchManhwazone(q: string): Promise<SearchResult[]> {
 // ── WeebCentral ──
 
 async function searchWeebCentral(q: string): Promise<SearchResult[]> {
-  const resp = await fetch("https://weebcentral.com/search/simple?location=main", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "HX-Request": "true",
-    },
-    body: `text=${encodeURIComponent(q)}`,
-  });
-  if (!resp.ok) throw new Error(`WeebCentral ${resp.status}`);
-  const html = await resp.text();
+  const { body: html } = await postWithH2(
+    "https://weebcentral.com/search/simple?location=main",
+    `text=${encodeURIComponent(q)}`,
+    { "HX-Request": "true" },
+  );
 
   const results: SearchResult[] = [];
   // Each result is an <a href="https://weebcentral.com/series/{ULID}/Slug">

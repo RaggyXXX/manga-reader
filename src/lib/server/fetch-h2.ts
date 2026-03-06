@@ -62,3 +62,38 @@ export async function fetchWithH2(url: string, isImage: boolean): Promise<{ body
     contentType: resp.headers["content-type"] || (isImage ? "image/jpeg" : "text/html"),
   };
 }
+
+export async function postWithH2(url: string, formBody: string, extraHeaders?: Record<string, string>): Promise<{ body: string; contentType: string }> {
+  const gotModule = await import("got");
+  const h2Module = await import("http2-wrapper");
+  const got = gotModule.default;
+  const h2auto = h2Module.default.auto;
+
+  const instance = got.extend({
+    // @ts-expect-error http2-wrapper type mismatch with got's RequestFunction
+    request: h2auto,
+    https: { ciphers: CHROME_CIPHERS },
+    timeout: { request: 8000 },
+    retry: { limit: 0 },
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const resp: any = await instance.post(url, {
+    body: formBody,
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+      Referer: "https://weebcentral.com/",
+      ...extraHeaders,
+    },
+  });
+
+  return {
+    body: resp.body,
+    contentType: resp.headers["content-type"] || "text/html",
+  };
+}
