@@ -1,4 +1,4 @@
-const SW_VERSION = "dev";
+const SW_VERSION = "v2-persistent-tabs";
 const CACHE_NAME = "manga-blast-v1";
 const IMG_CACHE = "manga-images-v2";
 const API_CACHE = "manga-api-v2";
@@ -47,6 +47,24 @@ async function evictOldImages() {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+
+  // Next.js static assets: cache-first (content-hashed, immutable)
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) =>
+        cache.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request).then((response) => {
+            if (response.ok) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          });
+        })
+      )
+    );
+    return;
+  }
 
   // Google Fonts: cache-first (immutable font files)
   if (
@@ -137,12 +155,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigation: network-first
+  // Navigation: stale-while-revalidate (instant from cache, update in background)
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match(event.request).then((r) => r || new Response("Offline", { status: 503 }))
+      caches.open(CACHE_NAME).then((cache) =>
+        cache.match(event.request).then((cached) => {
+          const fetchPromise = fetch(event.request).then((response) => {
+            if (response.ok) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          }).catch(() => {
+            if (cached) return cached;
+            return new Response("Offline", { status: 503 });
+          });
+
+          return cached || fetchPromise;
+        })
       )
     );
+    return;
   }
 });
