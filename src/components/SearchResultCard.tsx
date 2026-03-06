@@ -59,10 +59,13 @@ export function SearchResultCard({
       })
     : [];
 
+  const needsProxy = source === "atsumaru" || source === "mangabuddy";
   const imgSrc =
     coverUrl && source === "mangadex"
       ? `/api/mangadex/img?url=${encodeURIComponent(coverUrl)}`
-      : coverUrl;
+      : coverUrl && needsProxy
+        ? `/api/proxy?url=${encodeURIComponent(coverUrl)}`
+        : coverUrl;
 
   return (
     <motion.button

@@ -67,12 +67,13 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
   const [langLoading, setLangLoading] = useState(false);
 
   const isMangaDex = data.source === "mangadex";
+  const needsProxy = data.source === "atsumaru" || data.source === "mangabuddy";
   const imgSrc = useMemo(() => {
     if (!data.coverUrl) return "";
-    return isMangaDex
-      ? `/api/mangadex/img?url=${encodeURIComponent(data.coverUrl)}`
-      : data.coverUrl;
-  }, [data.coverUrl, isMangaDex]);
+    if (isMangaDex) return `/api/mangadex/img?url=${encodeURIComponent(data.coverUrl)}`;
+    if (needsProxy) return `/api/proxy?url=${encodeURIComponent(data.coverUrl)}`;
+    return data.coverUrl;
+  }, [data.coverUrl, isMangaDex, needsProxy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,7 +143,9 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
   const displayCover = meta?.coverUrl
     ? data.source === "mangadex"
       ? `/api/mangadex/img?url=${encodeURIComponent(meta.coverUrl)}`
-      : meta.coverUrl
+      : needsProxy
+        ? `/api/proxy?url=${encodeURIComponent(meta.coverUrl)}`
+        : meta.coverUrl
     : imgSrc;
 
   return (
