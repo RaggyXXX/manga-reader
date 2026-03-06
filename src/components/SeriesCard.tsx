@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ export function SeriesCard({
   variant = "grid",
 }: SeriesCardProps) {
   const reduced = useReducedMotion();
+  const router = useRouter();
   const readCount = getReadChapters(slug).length;
   const progress = totalChapters > 0 ? Math.min((readCount / totalChapters) * 100, 100) : 0;
   const unreadCount = totalChapters > 0 ? totalChapters - readCount : 0;
@@ -256,6 +258,8 @@ export function SeriesCard({
       <Link
         href={`/series/${slug}`}
         onClick={handleClick}
+        onMouseEnter={() => router.prefetch(`/series/${slug}`)}
+        onTouchStart={() => router.prefetch(`/series/${slug}`)}
         onContextMenu={(e) => { if (onLongPress) e.preventDefault(); }}
         className={`group relative block overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
           selected ? "ring-2 ring-primary border-primary" : "border-border/70"
