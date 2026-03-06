@@ -256,9 +256,11 @@ export function SeriesCard({
       <Link
         href={`/series/${slug}`}
         onClick={handleClick}
+        onContextMenu={(e) => { if (onLongPress) e.preventDefault(); }}
         className={`group relative block overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
           selected ? "ring-2 ring-primary border-primary" : "border-border/70"
         }`}
+        style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
       >
         {variant === "list" ? listContent : gridContent}
       </Link>
