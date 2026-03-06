@@ -12,6 +12,9 @@ export function imageProxyUrl(url: string, source?: MangaSource): string {
   if (source === "mangadex") {
     return `/api/mangadex/img?url=${encodeURIComponent(url)}`;
   }
+  if (source === "atsumaru" && url.startsWith("/")) {
+    return `https://atsu.moe${url}`;
+  }
   // Other sources: browser loads directly (real TLS fingerprint passes CF)
   return url;
 }
@@ -23,7 +26,9 @@ export function detectSource(url: string): MangaSource {
     const hostname = new URL(url).hostname;
     if (hostname.includes("mangadex.org")) return "mangadex";
     if (hostname.includes("mangakatana.com")) return "mangakatana";
-    if (hostname.includes("vymanga.com")) return "vymanga";
+    if (hostname.includes("weebcentral.com")) return "weebcentral";
+    if (hostname.includes("atsu.moe")) return "atsumaru";
+    if (hostname.includes("mangabuddy.com")) return "mangabuddy";
     if (hostname.includes("manhwazone.to")) return "manhwazone";
   } catch {
     // invalid URL
@@ -108,8 +113,12 @@ export async function discoverSeries(seriesUrl: string): Promise<DiscoveredSerie
       return discoverSeriesMangadex(seriesUrl);
     case "mangakatana":
       return discoverSeriesMangakatana(seriesUrl);
-    case "vymanga":
-      return discoverSeriesVymanga(seriesUrl);
+    case "weebcentral":
+      return discoverSeriesWeebCentral(seriesUrl);
+    case "atsumaru":
+      return discoverSeriesAtsumaru(seriesUrl);
+    case "mangabuddy":
+      return discoverSeriesMangaBuddy(seriesUrl);
     default:
       return discoverSeriesManhwazone(seriesUrl);
   }
@@ -124,8 +133,12 @@ export async function scrapeChapterImages(chapterUrl: string, source?: MangaSour
       return scrapeChapterImagesMangadex(chapterUrl);
     case "mangakatana":
       return scrapeChapterImagesMangakatana(chapterUrl);
-    case "vymanga":
-      return scrapeChapterImagesVymanga(chapterUrl);
+    case "weebcentral":
+      return scrapeChapterImagesWeebCentral(chapterUrl);
+    case "atsumaru":
+      return scrapeChapterImagesAtsumaru(chapterUrl);
+    case "mangabuddy":
+      return scrapeChapterImagesMangaBuddy(chapterUrl);
     default:
       return scrapeChapterImagesManhwazone(chapterUrl);
   }
@@ -244,16 +257,16 @@ function findNextChapterLink(doc: Document, currentNum: number): string | null {
 async function scrapeChapterImagesManhwazone(chapterUrl: string): Promise<string[]> {
   const doc = await fetchHtml(chapterUrl);
 
-  const chapterSection = doc.querySelector('section[aria-label="Chapter pages"]') || doc.querySelector(".reading-content") || doc.body;
+  // New layout uses <figure><img data-src="..."> with images on hot.planeptune.us
   const images: string[] = [];
-  const imgElements = chapterSection.querySelectorAll("img");
+  const imgElements = doc.querySelectorAll("img");
 
   for (const img of imgElements) {
     const src = img.getAttribute("data-src") || img.getAttribute("data-lazy-src") || img.getAttribute("src") || "";
     if (!src || src.includes("1x1.webp") || src.includes("fallback") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
       continue;
     }
-    if (src.includes("manhwatop.com") || src.includes("manhwazone.to/uploads") || isLikelyMangaImage(src)) {
+    if (src.includes("hot.planeptune.us") || src.includes("manhwatop.com") || src.includes("manhwazone.to/uploads")) {
       images.push(src);
     }
   }
@@ -372,57 +385,141 @@ async function scrapeChapterImagesMangakatana(chapterUrl: string): Promise<strin
 }
 
 // ============================================================
-// VYMANGA
+// WEEBCENTRAL
 // ============================================================
 
-async function discoverSeriesVymanga(seriesUrl: string): Promise<DiscoveredSeries> {
+function extractWeebCentralId(url: string): string {
+  // https://weebcentral.com/series/{ULID}/Slug
+  const parts = new URL(url).pathname.split("/");
+  return parts[2] || "";
+}
+
+async function discoverSeriesWeebCentral(seriesUrl: string): Promise<DiscoveredSeries> {
   const doc = await fetchHtml(seriesUrl);
+  const ulid = extractWeebCentralId(seriesUrl);
 
   const titleEl = doc.querySelector("h1");
-  const title = titleEl?.textContent?.trim() || doc.querySelector('meta[property="og:title"]')?.getAttribute("content") || "Unknown";
-  const coverUrl = doc.querySelector('meta[property="og:image"]')?.getAttribute("content")
-    || doc.querySelector(".detail-info img")?.getAttribute("src") || "";
-
-  const allLinks = Array.from(doc.querySelectorAll('a[href*="chapter-"]'));
-  const chapterUrls: string[] = [];
-  for (const link of allLinks) {
-    const href = link.getAttribute("href");
-    if (href && href.includes("chapter-")) {
-      const fullUrl = href.startsWith("http") ? href : `https://vymanga.com${href}`;
-      chapterUrls.push(fullUrl);
-    }
-  }
-
-  const unique = [...new Set(chapterUrls)];
-  unique.sort((a, b) => extractChapterNumVymanga(a) - extractChapterNumVymanga(b));
+  const title = titleEl?.textContent?.trim() || "Unknown";
+  const coverUrl = `https://temp.compsci88.com/cover/normal/${ulid}.webp`;
 
   return {
     title,
     coverUrl,
     sourceUrl: seriesUrl,
-    firstChapterUrl: unique[0] || null,
-    latestChapterUrl: unique[unique.length - 1] || null,
-    source: "vymanga",
+    firstChapterUrl: null,
+    latestChapterUrl: null,
+    source: "weebcentral",
+    sourceId: ulid,
   };
 }
 
-function extractChapterNumVymanga(url: string): number {
-  const match = url.match(/chapter-(\d+(?:\.\d+)?)/);
-  return match ? parseFloat(match[1]) : 0;
-}
-
-async function scrapeChapterImagesVymanga(chapterUrl: string): Promise<string[]> {
-  const doc = await fetchHtml(chapterUrl);
-  const images: string[] = [];
-  const imgElements = doc.querySelectorAll("img");
-
-  for (const img of imgElements) {
-    const src = img.getAttribute("data-src") || img.getAttribute("src") || "";
-    if (!src) continue;
-    if (src.includes("cdnxyz.xyz") || src.includes("vycdn.net")) {
-      images.push(src);
-    }
+async function scrapeChapterImagesWeebCentral(chapterUrl: string): Promise<string[]> {
+  // WeebCentral loads images via HTMX: /chapters/{ULID}/images?reading_style=long_strip
+  let chapterId = chapterUrl;
+  if (chapterId.startsWith("weebcentral:")) {
+    chapterId = chapterId.replace("weebcentral:", "");
+  } else if (chapterId.includes("weebcentral.com/chapters/")) {
+    chapterId = new URL(chapterId).pathname.split("/")[2] || "";
   }
 
+  const resp = await fetch(`/api/scrape?url=${encodeURIComponent(`https://weebcentral.com/chapters/${chapterId}/images?is_prev=False&current_page=1&reading_style=long_strip`)}`);
+  if (!resp.ok) throw new Error(`WeebCentral images fetch failed: ${resp.status}`);
+  const html = await resp.text();
+
+  const images: string[] = [];
+  const imgRe = /src="(https:\/\/hot\.planeptune\.us\/[^"]+)"/gi;
+  let m;
+  while ((m = imgRe.exec(html)) !== null) {
+    if (!images.includes(m[1])) images.push(m[1]);
+  }
   return images;
 }
+
+// ============================================================
+// ATSUMARU
+// ============================================================
+
+async function discoverSeriesAtsumaru(seriesUrl: string): Promise<DiscoveredSeries> {
+  const mangaId = new URL(seriesUrl).pathname.split("/").pop() || "";
+
+  const resp = await fetch(`https://atsu.moe/api/manga/page?id=${mangaId}`);
+  if (!resp.ok) throw new Error(`Atsumaru series fetch failed: ${resp.status}`);
+  const data = await resp.json();
+  const manga = data.mangaPage;
+
+  const poster = manga.poster;
+  const coverUrl = poster?.mediumImage
+    ? `https://atsu.moe/${poster.mediumImage}`
+    : poster?.smallImage
+      ? `https://atsu.moe/${poster.smallImage}`
+      : "";
+
+  return {
+    title: manga.englishTitle || manga.title || "Unknown",
+    coverUrl,
+    sourceUrl: seriesUrl,
+    firstChapterUrl: null,
+    latestChapterUrl: null,
+    source: "atsumaru",
+    sourceId: mangaId,
+  };
+}
+
+async function scrapeChapterImagesAtsumaru(chapterIdOrUrl: string): Promise<string[]> {
+  // chapterIdOrUrl is stored as "atsumaru:{mangaId}:{chapterId}"
+  let mangaId = "";
+  let chapterId = "";
+
+  if (chapterIdOrUrl.startsWith("atsumaru:")) {
+    const parts = chapterIdOrUrl.replace("atsumaru:", "").split(":");
+    mangaId = parts[0];
+    chapterId = parts[1];
+  }
+
+  const resp = await fetch(`https://atsu.moe/api/read/chapter?mangaId=${mangaId}&chapterId=${chapterId}`);
+  if (!resp.ok) throw new Error(`Atsumaru chapter fetch failed: ${resp.status}`);
+  const data = await resp.json();
+  const pages = data.readChapter?.pages || [];
+
+  return pages.map((p: { image: string }) => {
+    const img = p.image;
+    return img.startsWith("/") ? `https://atsu.moe${img}` : img;
+  });
+}
+
+// ============================================================
+// MANGABUDDY
+// ============================================================
+
+async function discoverSeriesMangaBuddy(seriesUrl: string): Promise<DiscoveredSeries> {
+  const doc = await fetchHtml(seriesUrl);
+
+  const titleEl = doc.querySelector("h1");
+  const title = titleEl?.textContent?.trim() || "Unknown";
+  const coverImg = doc.querySelector('meta[property="og:image"]')?.getAttribute("content") || "";
+
+  return {
+    title,
+    coverUrl: coverImg,
+    sourceUrl: seriesUrl,
+    firstChapterUrl: null,
+    latestChapterUrl: null,
+    source: "mangabuddy",
+  };
+}
+
+async function scrapeChapterImagesMangaBuddy(chapterUrl: string): Promise<string[]> {
+  const doc = await fetchHtml(chapterUrl);
+
+  // MangaBuddy stores images in: var chapImages = 'url1,url2,...'
+  const scripts = doc.querySelectorAll("script");
+  for (const script of scripts) {
+    const text = script.textContent || "";
+    const match = text.match(/var\s+chapImages\s*=\s*'([^']+)'/);
+    if (match) {
+      return match[1].split(",").filter((u) => u.startsWith("http"));
+    }
+  }
+  return [];
+}
+

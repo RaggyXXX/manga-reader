@@ -23,7 +23,6 @@ import { useSyncContext } from "@/contexts/SyncContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 
 export default function SeriesPage() {
   const params = useParams();
@@ -162,8 +161,7 @@ export default function SeriesPage() {
 
   return (
     <div className="space-y-4 pb-28 md:pb-4">
-      <div className="flex items-center justify-between">
-        <ContextBackChevron className="shrink-0" />
+      <div className="flex items-center justify-end">
         <DeleteSeriesButton seriesSlug={slug} seriesTitle={series.title} />
       </div>
 

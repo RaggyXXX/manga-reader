@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MangaSource } from "@/lib/manga-store";
@@ -10,8 +11,10 @@ import { motionOrInstant } from "@/lib/motion";
 const SOURCE_LABELS: Record<MangaSource, string> = {
   mangadex: "MangaDex",
   mangakatana: "MangaKatana",
-  vymanga: "VyManga",
   manhwazone: "Manhwazone",
+  weebcentral: "WeebCentral",
+  atsumaru: "Atsumaru",
+  mangabuddy: "MangaBuddy",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -158,9 +161,14 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
               <p className="text-lg font-semibold">{meta?.title || data.title}</p>
               <p className="text-xs text-muted-foreground">{SOURCE_LABELS[data.source]}</p>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Close
-            </Button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-500/10"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
 

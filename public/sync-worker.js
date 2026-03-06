@@ -132,38 +132,31 @@ function extractNextLink(html, currentNum) {
 }
 
 function extractImagesManhwazone(html) {
-  let section = html;
-  const readingContent = html.match(/class\s*=\s*["']reading-content["']([\s\S]*?)(?=<\/div>\s*<(?:div|footer|section|aside)\s|$)/i);
-  if (readingContent) {
-    section = readingContent[0] + readingContent[1];
-  }
-  const chapterSection = html.match(/aria-label\s*=\s*["']Chapter pages["']([\s\S]*?)(?=<\/section>)/i);
-  if (chapterSection) {
-    section = chapterSection[0] + chapterSection[1];
-  }
-
   const images = [];
-  const imgRe = /<img\s+[^>]*?(?:data-src|data-lazy-src|src)\s*=\s*["']([^"']+)["'][^>]*>/gi;
+  // New layout: <figure><img data-src="https://hot.planeptune.us/manga/..."></figure>
+  const dataSrcRe = /<img\s+[^>]*?data-src\s*=\s*["']([^"']+)["'][^>]*>/gi;
   let m;
-  while ((m = imgRe.exec(section)) !== null) {
+  while ((m = dataSrcRe.exec(html)) !== null) {
     const src = m[1];
     if (!src || src.includes("1x1.webp") || src.includes("fallback") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
       continue;
     }
-    if (src.includes("manhwatop.com") || src.includes("manhwazone.to/uploads") || isLikelyMangaImage(src)) {
-      images.push(src);
+    if (src.includes("hot.planeptune.us") || src.includes("manhwatop.com") || src.includes("manhwazone.to/uploads")) {
+      if (!images.includes(src)) images.push(src);
     }
   }
 
-  const dataSrcRe = /<img\s+[^>]*?data-src\s*=\s*["']([^"']+)["'][^>]*>/gi;
-  while ((m = dataSrcRe.exec(section)) !== null) {
-    const src = m[1];
-    if (images.includes(src)) continue;
-    if (!src || src.includes("1x1.webp") || src.includes("fallback") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
-      continue;
-    }
-    if (src.includes("manhwatop.com") || src.includes("manhwazone.to/uploads") || isLikelyMangaImage(src)) {
-      images.push(src);
+  // Fallback: regular src attributes
+  if (images.length === 0) {
+    const imgRe = /<img\s+[^>]*?src\s*=\s*["']([^"']+)["'][^>]*>/gi;
+    while ((m = imgRe.exec(html)) !== null) {
+      const src = m[1];
+      if (!src || src.includes("1x1.webp") || src.includes("fallback") || src.includes("loading") || src.includes("pixel") || src.includes("data:image")) {
+        continue;
+      }
+      if (src.includes("hot.planeptune.us") || src.includes("manhwatop.com") || src.includes("manhwazone.to/uploads")) {
+        if (!images.includes(src)) images.push(src);
+      }
     }
   }
 
@@ -196,26 +189,6 @@ function extractImagesMangakatana(html) {
     }
   }
   return [];
-}
-
-// ── VyManga helpers ──
-
-function extractChapterNumVymanga(url) {
-  const match = url.match(/chapter-(\d+(?:\.\d+)?)/);
-  return match ? parseFloat(match[1]) : 0;
-}
-
-function extractImagesVymanga(html) {
-  const images = [];
-  const imgRe = /<img\s+[^>]*?(?:data-src|src)\s*=\s*["']([^"']+)["'][^>]*>/gi;
-  let m;
-  while ((m = imgRe.exec(html)) !== null) {
-    const src = m[1];
-    if (src && (src.includes("cdnxyz.xyz") || src.includes("vycdn.net"))) {
-      images.push(src);
-    }
-  }
-  return images;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -628,9 +601,252 @@ async function syncMangakatana(msg) {
   }
 }
 
-// ── VyManga Sync ──
+// ── WeebCentral Sync ──
 
-async function syncVymanga(msg) {
+async function syncWeebCentral(msg) {
+  const { slug, sourceId, origin } = msg;
+  const unsyncedChapters = msg.unsyncedChapters || [];
+  let alreadySyncedCount = msg.alreadySyncedCount || 0;
+  let totalKnown = msg.totalKnown || 0;
+
+  try {
+    let total = totalKnown;
+    let completed = alreadySyncedCount;
+    var chaptersToScrape = unsyncedChapters.slice();
+
+    // Phase 1: Discover chapters from series page
+    if (totalKnown === 0 && msg.seriesUrl) {
+      self.postMessage({ type: "checking_new" });
+      const html = await fetchHtmlText(msg.seriesUrl, origin);
+
+      // Extract chapter links: href="https://weebcentral.com/chapters/{ULID}"
+      const re = /href\s*=\s*["'](https:\/\/weebcentral\.com\/chapters\/[A-Z0-9]+)["']/gi;
+      let m;
+      const chapterUrls = [];
+      while ((m = re.exec(html)) !== null) {
+        chapterUrls.push(m[1]);
+      }
+
+      const unique = [...new Set(chapterUrls)];
+      // Reverse so chapter 1 comes first (they appear latest-first on the page)
+      unique.reverse();
+
+      for (let i = 0; i < unique.length; i++) {
+        if (cancelled) break;
+        const url = unique[i];
+        const num = i + 1;
+
+        self.postMessage({
+          type: "chapter_discovered",
+          number: num,
+          title: "Chapter " + num,
+          url: "weebcentral:" + url.split("/chapters/")[1],
+          discoveredCount: i + 1,
+        });
+      }
+
+      if (!cancelled) {
+        self.postMessage({ type: "discovery_done", totalDiscovered: unique.length });
+      }
+      return;
+    }
+
+    // Phase 1b: Check for new chapters
+    if (msg.seriesUrl && !cancelled) {
+      self.postMessage({ type: "checking_new" });
+      const html = await fetchHtmlText(msg.seriesUrl, origin);
+
+      const re = /href\s*=\s*["'](https:\/\/weebcentral\.com\/chapters\/[A-Z0-9]+)["']/gi;
+      let m;
+      const currentUrls = new Set(unsyncedChapters.map(function(c) { return c.url; }));
+
+      while ((m = re.exec(html)) !== null) {
+        if (cancelled) break;
+        const chId = m[1].split("/chapters/")[1];
+        const chUrl = "weebcentral:" + chId;
+        if (!currentUrls.has(chUrl)) {
+          total++;
+          self.postMessage({
+            type: "chapter_discovered",
+            number: total,
+            title: "Chapter " + total,
+            url: chUrl,
+            discoveredCount: total,
+          });
+        }
+      }
+    }
+
+    // Phase 2: Scrape images
+    for (let i = 0; i < chaptersToScrape.length; i++) {
+      if (cancelled) break;
+
+      const ch = chaptersToScrape[i];
+      const chId = ch.url.replace("weebcentral:", "");
+
+      try {
+        const imgUrl = "https://weebcentral.com/chapters/" + chId + "/images?is_prev=False&current_page=1&reading_style=long_strip";
+        const html = await fetchHtmlText(imgUrl, origin);
+
+        const imageUrls = [];
+        const imgRe = /src="(https:\/\/hot\.planeptune\.us\/[^"]+)"/gi;
+        let im;
+        while ((im = imgRe.exec(html)) !== null) {
+          if (!imageUrls.includes(im[1])) imageUrls.push(im[1]);
+        }
+
+        completed++;
+        self.postMessage({
+          type: "chapter_scraped",
+          slug: slug,
+          number: ch.number,
+          title: ch.title,
+          url: ch.url,
+          imageUrls: imageUrls,
+          completed: completed,
+          total: total,
+        });
+      } catch (err) {
+        completed++;
+      }
+
+      if (i < chaptersToScrape.length - 1 && !cancelled) {
+        await delay(1000);
+      }
+    }
+
+    if (cancelled) {
+      self.postMessage({ type: "stopped" });
+    } else {
+      self.postMessage({ type: "done" });
+    }
+  } catch (err) {
+    self.postMessage({ type: "error", error: (err && err.message) || String(err) });
+  }
+}
+
+// ── Atsumaru Sync ──
+
+async function syncAtsumaru(msg) {
+  const { slug, sourceId, origin } = msg;
+  const unsyncedChapters = msg.unsyncedChapters || [];
+  let alreadySyncedCount = msg.alreadySyncedCount || 0;
+  let totalKnown = msg.totalKnown || 0;
+
+  try {
+    let total = totalKnown;
+    let completed = alreadySyncedCount;
+    var chaptersToScrape = unsyncedChapters.slice();
+
+    // Phase 1: Discover chapters via API
+    if (totalKnown === 0 && sourceId) {
+      self.postMessage({ type: "checking_new" });
+
+      const chaptersData = await fetchJson("https://atsu.moe/api/manga/allChapters?mangaId=" + sourceId);
+      const chapters = chaptersData.chapters || [];
+
+      // Chapters come in reverse order (latest first), reverse for ascending
+      const sorted = chapters.slice().reverse();
+
+      for (let i = 0; i < sorted.length; i++) {
+        if (cancelled) break;
+        const ch = sorted[i];
+        const num = ch.number || (i + 1);
+
+        self.postMessage({
+          type: "chapter_discovered",
+          number: num,
+          title: ch.title || ("Chapter " + num),
+          url: "atsumaru:" + sourceId + ":" + ch.id,
+          discoveredCount: i + 1,
+        });
+      }
+
+      if (!cancelled) {
+        self.postMessage({ type: "discovery_done", totalDiscovered: sorted.length });
+      }
+      return;
+    }
+
+    // Phase 1b: Check for new chapters
+    if (sourceId && !cancelled) {
+      self.postMessage({ type: "checking_new" });
+
+      const chaptersData = await fetchJson("https://atsu.moe/api/manga/allChapters?mangaId=" + sourceId);
+      const apiChapters = chaptersData.chapters || [];
+
+      const knownUrls = new Set(unsyncedChapters.map(function(c) { return c.url; }));
+
+      for (const ch of apiChapters) {
+        if (cancelled) break;
+        const chUrl = "atsumaru:" + sourceId + ":" + ch.id;
+        if (!knownUrls.has(chUrl)) {
+          const num = ch.number || 0;
+          if (num > 0) {
+            total++;
+            self.postMessage({
+              type: "chapter_discovered",
+              number: num,
+              title: ch.title || ("Chapter " + num),
+              url: chUrl,
+              discoveredCount: total,
+            });
+          }
+        }
+      }
+    }
+
+    // Phase 2: Scrape images
+    for (let i = 0; i < chaptersToScrape.length; i++) {
+      if (cancelled) break;
+
+      const ch = chaptersToScrape[i];
+      // URL format: atsumaru:{mangaId}:{chapterId}
+      const parts = ch.url.replace("atsumaru:", "").split(":");
+      const mangaId = parts[0];
+      const chapterId = parts[1];
+
+      try {
+        const data = await fetchJson("https://atsu.moe/api/read/chapter?mangaId=" + mangaId + "&chapterId=" + chapterId);
+        const pages = (data.readChapter && data.readChapter.pages) || [];
+        const imageUrls = pages.map(function(p) {
+          var img = p.image;
+          return img.startsWith("/") ? "https://atsu.moe" + img : img;
+        });
+
+        completed++;
+        self.postMessage({
+          type: "chapter_scraped",
+          slug: slug,
+          number: ch.number,
+          title: ch.title,
+          url: ch.url,
+          imageUrls: imageUrls,
+          completed: completed,
+          total: total,
+        });
+      } catch (err) {
+        completed++;
+      }
+
+      if (i < chaptersToScrape.length - 1 && !cancelled) {
+        await delay(300);
+      }
+    }
+
+    if (cancelled) {
+      self.postMessage({ type: "stopped" });
+    } else {
+      self.postMessage({ type: "done" });
+    }
+  } catch (err) {
+    self.postMessage({ type: "error", error: (err && err.message) || String(err) });
+  }
+}
+
+// ── MangaBuddy Sync ──
+
+async function syncMangaBuddy(msg) {
   const { slug, seriesUrl, origin } = msg;
   const unsyncedChapters = msg.unsyncedChapters || [];
   let alreadySyncedCount = msg.alreadySyncedCount || 0;
@@ -641,25 +857,32 @@ async function syncVymanga(msg) {
     let completed = alreadySyncedCount;
     var chaptersToScrape = unsyncedChapters.slice();
 
-    // Phase 1: Discover chapters
+    // Phase 1: Discover chapters from series page
     if (totalKnown === 0 && seriesUrl) {
       self.postMessage({ type: "checking_new" });
+
+      // MangaBuddy loads chapters via /api/manga/{bookId}/chapters
       const html = await fetchHtmlText(seriesUrl, origin);
 
-      const chapterHrefs = extractAllHrefs(html, "chapter-");
+      // Extract chapter links: href="/{slug}/chapter-{num}-{title}"
+      const bookSlug = seriesUrl.replace("https://mangabuddy.com/", "").split("/")[0];
+      const re = new RegExp('href="/' + bookSlug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + '/([^"]*chapter[^"]*)"', 'gi');
+      let m;
       const chapterUrls = [];
-      for (const href of chapterHrefs) {
-        const fullUrl = href.startsWith("http") ? href : "https://vymanga.com" + href;
-        chapterUrls.push(fullUrl);
+      while ((m = re.exec(html)) !== null) {
+        chapterUrls.push("https://mangabuddy.com/" + bookSlug + "/" + m[1]);
       }
 
       const unique = [...new Set(chapterUrls)];
-      unique.sort(function(a, b) { return extractChapterNumVymanga(a) - extractChapterNumVymanga(b); });
+      // Sort by chapter number
+      unique.sort(function(a, b) {
+        return extractChapterNumMangaBuddy(a) - extractChapterNumMangaBuddy(b);
+      });
 
       for (let i = 0; i < unique.length; i++) {
         if (cancelled) break;
         const url = unique[i];
-        const num = extractChapterNumVymanga(url);
+        const num = extractChapterNumMangaBuddy(url);
 
         self.postMessage({
           type: "chapter_discovered",
@@ -681,14 +904,16 @@ async function syncVymanga(msg) {
       self.postMessage({ type: "checking_new" });
       const html = await fetchHtmlText(seriesUrl, origin);
 
-      const chapterHrefs = extractAllHrefs(html, "chapter-");
+      const bookSlug = seriesUrl.replace("https://mangabuddy.com/", "").split("/")[0];
+      const re = new RegExp('href="/' + bookSlug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + '/([^"]*chapter[^"]*)"', 'gi');
+      let m;
       const currentUrls = new Set(unsyncedChapters.map(function(c) { return c.url; }));
 
-      for (const href of chapterHrefs) {
+      while ((m = re.exec(html)) !== null) {
         if (cancelled) break;
-        const fullUrl = href.startsWith("http") ? href : "https://vymanga.com" + href;
+        const fullUrl = "https://mangabuddy.com/" + bookSlug + "/" + m[1];
         if (!currentUrls.has(fullUrl)) {
-          const num = extractChapterNumVymanga(fullUrl);
+          const num = extractChapterNumMangaBuddy(fullUrl);
           if (num > 0) {
             total++;
             self.postMessage({
@@ -710,7 +935,7 @@ async function syncVymanga(msg) {
       const ch = chaptersToScrape[i];
       try {
         const html = await fetchHtmlText(ch.url, origin);
-        const imageUrls = extractImagesVymanga(html);
+        const imageUrls = extractImagesMangaBuddy(html);
         completed++;
 
         self.postMessage({
@@ -742,6 +967,20 @@ async function syncVymanga(msg) {
   }
 }
 
+function extractChapterNumMangaBuddy(url) {
+  const match = url.match(/chapter-(\d+(?:\.\d+)?)/);
+  return match ? parseFloat(match[1]) : 0;
+}
+
+function extractImagesMangaBuddy(html) {
+  // var chapImages = 'url1,url2,...'
+  const match = html.match(/var\s+chapImages\s*=\s*'([^']+)'/);
+  if (match) {
+    return match[1].split(",").filter(function(u) { return u.startsWith("http"); });
+  }
+  return [];
+}
+
 // ── Main message handler ──
 
 self.onmessage = async function (e) {
@@ -766,8 +1005,14 @@ self.onmessage = async function (e) {
         case "mangakatana":
           await syncMangakatana(msg);
           break;
-        case "vymanga":
-          await syncVymanga(msg);
+        case "weebcentral":
+          await syncWeebCentral(msg);
+          break;
+        case "atsumaru":
+          await syncAtsumaru(msg);
+          break;
+        case "mangabuddy":
+          await syncMangaBuddy(msg);
           break;
         default:
           await syncManhwazone(msg);

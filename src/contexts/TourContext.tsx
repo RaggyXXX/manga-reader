@@ -184,17 +184,7 @@ function buildShortTourPhases(hasRealLibrary: boolean): TourPhase[] {
         popover: {
           title: "Search",
           description:
-            "Search for manga across all supported sources — MangaDex, MangaKatana, VyManga, and Manhwazone.",
-          side: "bottom",
-          align: "start",
-        },
-      },
-      {
-        element: '[data-tour="add-url-tab"]',
-        popover: {
-          title: "Add by URL",
-          description:
-            "Or paste a direct link to a manga series page from any supported source.",
+            "Search for manga across all supported sources — MangaDex, MangaKatana, and Manhwazone.",
           side: "bottom",
           align: "start",
         },
@@ -313,16 +303,7 @@ function buildLongTourPhases(hasRealLibrary: boolean): TourPhase[] {
         element: '[data-tour="add-search-tab"]',
         popover: {
           title: "Search",
-          description: "Search across all supported sources — MangaDex, MangaKatana, VyManga, and Manhwazone.",
-          side: "bottom",
-          align: "start",
-        },
-      },
-      {
-        element: '[data-tour="add-url-tab"]',
-        popover: {
-          title: "Add by URL",
-          description: "Paste a direct link to add any manga from a supported source.",
+          description: "Search across all supported sources — MangaDex, MangaKatana, and Manhwazone.",
           side: "bottom",
           align: "start",
         },

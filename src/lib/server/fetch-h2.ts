@@ -12,9 +12,10 @@ export const CHROME_CIPHERS = [
 ].join(":");
 
 export function getRefererForHost(hostname: string): string {
-  if (hostname.includes("manhwatop.com") || hostname.includes("manhwazone.to")) return "https://manhwazone.to/";
+  if (hostname.includes("manhwatop.com") || hostname.includes("manhwazone.to") || hostname.includes("planeptune.us")) return "https://manhwazone.to/";
   if (hostname.includes("mangakatana.com")) return "https://mangakatana.com/";
-  if (hostname.includes("vymanga.com") || hostname.includes("cdnxyz.xyz") || hostname.includes("vycdn.net")) return "https://vymanga.com/";
+  if (hostname.includes("weebcentral.com") || hostname.includes("compsci88.com")) return "https://weebcentral.com/";
+  if (hostname.includes("mangabuddy.com") || hostname.includes("mbbcdn")) return "https://mangabuddy.com/";
   return "";
 }
 

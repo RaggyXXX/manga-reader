@@ -32,7 +32,18 @@ async function countRemoteChapters(s, origin) {
   if (source === "mangadex") {
     return countMangaDexChapters(s, origin);
   }
+  if (source === "atsumaru") {
+    return countAtsumaruChapters(s);
+  }
   return countScrapedChapters(s.sourceUrl, source, origin);
+}
+
+async function countAtsumaruChapters(s) {
+  if (!s.sourceId) return 0;
+  var res = await fetch("https://atsu.moe/api/manga/allChapters?mangaId=" + s.sourceId);
+  if (!res.ok) return 0;
+  var data = await res.json();
+  return Array.isArray(data.chapters) ? data.chapters.length : 0;
 }
 
 async function countMangaDexChapters(s, origin) {
@@ -56,8 +67,10 @@ async function countScrapedChapters(sourceUrl, source, origin) {
   switch (source) {
     case "mangakatana":
       return countUniqueMatches(html, /\/c\d+/g);
-    case "vymanga":
-      return countUniqueMatches(html, /chapter-\d+/g);
+    case "weebcentral":
+      return countUniqueMatches(html, /\/chapters\/[A-Z0-9]+/g);
+    case "mangabuddy":
+      return countMangaBuddyChapters(html);
     case "manhwazone":
     default:
       return countManhwazoneChapters(html);
@@ -76,6 +89,16 @@ function countManhwazoneChapters(html) {
       .filter(Boolean)
   );
   return unique.size;
+}
+
+function countMangaBuddyChapters(html) {
+  var matches = html.match(/chapter-(\d+(?:\.\d+)?)/g);
+  if (!matches) return 0;
+  var nums = matches.map(function(m) {
+    var n = m.match(/chapter-(\d+)/);
+    return n ? parseInt(n[1], 10) : 0;
+  });
+  return Math.max.apply(null, nums.concat([0]));
 }
 
 function countUniqueMatches(html, pattern) {

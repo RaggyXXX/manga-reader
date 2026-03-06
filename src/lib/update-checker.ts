@@ -11,6 +11,8 @@ export async function checkForUpdates(series: StoredSeries): Promise<number> {
 
     if (source === "mangadex") {
       remoteCount = await countMangaDexChapters(series);
+    } else if (source === "atsumaru") {
+      remoteCount = await countAtsumaruChapters(series);
     } else {
       remoteCount = await countScrapedChapters(series.sourceUrl, source);
     }
@@ -30,6 +32,14 @@ async function countMangaDexChapters(series: StoredSeries): Promise<number> {
   return Array.isArray(data.chapters) ? data.chapters.length : 0;
 }
 
+async function countAtsumaruChapters(series: StoredSeries): Promise<number> {
+  if (!series.sourceId) return 0;
+  const res = await fetch(`https://atsu.moe/api/manga/allChapters?mangaId=${series.sourceId}`);
+  if (!res.ok) return 0;
+  const data = await res.json();
+  return Array.isArray(data.chapters) ? data.chapters.length : 0;
+}
+
 async function countScrapedChapters(sourceUrl: string, source: string): Promise<number> {
   const res = await fetch(`/api/scrape?url=${encodeURIComponent(sourceUrl)}`);
   if (!res.ok) return 0;
@@ -38,8 +48,10 @@ async function countScrapedChapters(sourceUrl: string, source: string): Promise<
   switch (source) {
     case "mangakatana":
       return countMatches(html, /\/c\d+/g);
-    case "vymanga":
-      return countMatches(html, /chapter-\d+/g);
+    case "weebcentral":
+      return countMatches(html, /\/chapters\/[A-Z0-9]+/g);
+    case "mangabuddy":
+      return countMangaBuddyChapters(html);
     case "manhwazone":
     default:
       return countManhwazoneChapters(html);
@@ -55,6 +67,16 @@ function countManhwazoneChapters(html: string): number {
     return match ? match[1] : null;
   }).filter(Boolean));
   return unique.size;
+}
+
+function countMangaBuddyChapters(html: string): number {
+  const matches = html.match(/chapter-(\d+(?:\.\d+)?)/g);
+  if (!matches) return 0;
+  const nums = matches.map((m) => {
+    const n = m.match(/chapter-(\d+)/);
+    return n ? parseInt(n[1], 10) : 0;
+  });
+  return Math.max(...nums, 0);
 }
 
 function countMatches(html: string, pattern: RegExp): number {

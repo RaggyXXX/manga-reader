@@ -9,15 +9,19 @@ import { motionOrInstant } from "@/lib/motion";
 const SOURCE_COLORS: Record<MangaSource, string> = {
   mangadex: "#ff6740",
   mangakatana: "#4a90d9",
-  vymanga: "#6bc95b",
   manhwazone: "#e8a849",
+  weebcentral: "#7c3aed",
+  atsumaru: "#10b981",
+  mangabuddy: "#f43f5e",
 };
 
 const SOURCE_LABELS: Record<MangaSource, string> = {
   mangadex: "MangaDex",
   mangakatana: "MangaKatana",
-  vymanga: "VyManga",
   manhwazone: "Manhwazone",
+  weebcentral: "WeebCentral",
+  atsumaru: "Atsumaru",
+  mangabuddy: "MangaBuddy",
 };
 
 const PRIORITY_LANGS = ["en", "de", "fr", "es", "ja", "ko"];
@@ -26,6 +30,7 @@ interface SearchResultCardProps {
   title: string;
   coverUrl: string;
   source: MangaSource;
+  chapterCount?: number;
   availableLanguages?: string[];
   loading?: boolean;
   disabled?: boolean;
@@ -36,6 +41,7 @@ export function SearchResultCard({
   title,
   coverUrl,
   source,
+  chapterCount,
   availableLanguages,
   loading,
   disabled,
@@ -88,6 +94,11 @@ export function SearchResultCard({
             <span className="h-2 w-2 rounded-full" style={{ background: SOURCE_COLORS[source] }} />
             {SOURCE_LABELS[source]}
           </Badge>
+          {chapterCount != null && chapterCount > 0 ? (
+            <Badge variant="muted" className="text-[10px]">
+              {chapterCount} ch
+            </Badge>
+          ) : null}
           {sortedLangs.slice(0, 4).map((lang) => (
             <Badge key={lang} variant="muted" className="text-[10px]">
               {lang.toUpperCase()}

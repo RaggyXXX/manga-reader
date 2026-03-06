@@ -205,9 +205,9 @@ async function previewHtmlSource(
   }
 
   // ── Common: Title ──
-  const ogTitle = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/);
   const h1 = html.match(/<h1[^>]*>([^<]+)</);
-  meta.title = ogTitle?.[1]?.trim() || h1?.[1]?.trim() || "Unknown";
+  const ogTitle = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/);
+  meta.title = h1?.[1]?.trim() || ogTitle?.[1]?.trim() || "Unknown";
 
   // ── Common: Cover ──
   const ogImage = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/);
@@ -220,10 +220,10 @@ async function previewHtmlSource(
 
   if (source === "mangakatana") {
     parseMangaKatana(html, meta);
-  } else if (source === "vymanga") {
-    parseVyManga(html, meta);
   } else if (source === "manhwazone") {
     parseManhwazone(html, meta);
+  } else if (source === "mangabuddy") {
+    parseMangaBuddy(html, meta);
   }
 
   // Decode HTML entities in description
@@ -268,73 +268,10 @@ function parseMangaKatana(html: string, meta: PreviewMeta) {
   const updateMatch = html.match(/Update at:[^>]*<[^>]*>([^<]+)/i);
   if (updateMatch) meta.updatedAt = updateMatch[1].trim();
 
-  // Description from summary div
-  const summaryMatch = html.match(/class="summary"[^>]*>([\s\S]*?)<\/div>/);
-  if (summaryMatch) {
-    meta.description = summaryMatch[1].replace(/<[^>]+>/g, "").trim();
-  }
-
-  meta.type = "Manga";
-}
-
-function parseVyManga(html: string, meta: PreviewMeta) {
-  // Alt title (from paragraph after h1)
-  const altMatch = html.match(/<h1[^>]*>[^<]+<\/h1>\s*<p[^>]*>([^<]+)/i);
-  if (altMatch && altMatch[1].trim()) {
-    meta.altTitles = [altMatch[1].trim()];
-  }
-
-  // Status
-  const statusMatch = html.match(/Status\s*<[^>]*>:\s*<\/[^>]*>([^<]+)/i);
-  if (statusMatch) meta.status = statusMatch[1].trim();
-  if (meta.status === "Unknown") {
-    const statusFallback = html.match(/text-(completed|ongoing)"[^>]*>([^<]+)/i);
-    if (statusFallback) meta.status = statusFallback[2].trim();
-  }
-
-  // Authors
-  const authorMatch = html.match(/Authors\s*<[^>]*>:\s*<\/[^>]*>([^<]+)/i);
-  if (authorMatch && authorMatch[1].trim() !== "--") {
-    meta.author = authorMatch[1].trim();
-  }
-
-  // Genres
-  const genreMatches = html.match(/badge badge-info label-badge">([^<]+)/g);
-  if (genreMatches) {
-    meta.genres = genreMatches.map((m) => m.replace(/.*">/, "").trim()).slice(0, 12);
-  }
-
-  // Rating
-  const ratingMatch = html.match(/(\d+\.\d+)\/10\s*\(([^)]+)\)/);
-  if (ratingMatch) {
-    meta.rating = `${ratingMatch[1]}/10`;
-    meta.views = ratingMatch[2].trim() + " votes";
-  }
-
-  // Views
-  const viewMatch = html.match(/View\s*<[^>]*>:\s*<\/[^>]*>([\d,]+)/i);
-  if (viewMatch) meta.views = viewMatch[1].trim();
-
-  // Followers
-  const followMatch = html.match(/Followed by ([\d,]+) people/i);
-  if (followMatch) meta.follows = followMatch[1].trim();
-
-  // Chapter count
-  const chMatches = html.match(/Chapter\s+(\d+(?:\.\d+)?)/g);
-  if (chMatches) {
-    const unique = new Set(chMatches.map((m) => m.replace(/Chapter\s+/, "")));
-    meta.chapterCount = unique.size;
-  }
-
-  // Description
-  const descMatch = html.match(/class="description"[^>]*>([\s\S]*?)<\/div>/);
-  if (!descMatch) {
-    const summaryMatch = html.match(/Summary<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i);
-    if (summaryMatch) {
-      meta.description = summaryMatch[1].replace(/<[^>]+>/g, "").trim();
-    }
-  } else {
-    meta.description = descMatch[1].replace(/<[^>]+>/g, "").trim();
+  // Description from summary div — structure: <div class="summary"><div class="label">Description</div><p>text</p></div>
+  const summaryPMatch = html.match(/class="summary"[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/);
+  if (summaryPMatch) {
+    meta.description = summaryPMatch[1].replace(/<[^>]+>/g, "").trim();
   }
 
   meta.type = "Manga";
@@ -358,8 +295,9 @@ function parseManhwazone(html: string, meta: PreviewMeta) {
     meta.status = s === "Finished" ? "Completed" : s === "On Going" ? "Ongoing" : s;
   }
 
-  // Authors
-  const authorMatch = html.match(/Authors[\s\S]*?<\/[^>]*>\s*([^<]+)/i);
+  // Authors — new layout: <span>Authors</span><span class="font-medium">Name</span>
+  const authorMatch = html.match(/Authors<\/span>\s*<span[^>]*class="[^"]*font-medium[^"]*"[^>]*>([^<]+)/i)
+    || html.match(/Authors[\s\S]*?font-medium[^>]*>([^<]+)/i);
   if (authorMatch && authorMatch[1].trim().length > 1) {
     meta.author = authorMatch[1].trim();
   }
@@ -388,16 +326,22 @@ function parseManhwazone(html: string, meta: PreviewMeta) {
   // Views (from popularity)
   const popMatch = html.match(/Popularity[\s\S]*?<dd[^>]*>([\d,.]+)/i);
 
-  // Chapter count
+  // Chapter count — Livewire loads chapters dynamically, so extract from "Read Latest" link
   const chLinks = html.match(/\/chapter-(\d+)/g);
   if (chLinks) {
-    const nums = new Set(chLinks.map((m) => m.replace(/.*chapter-/, "")));
-    meta.chapterCount = nums.size;
+    // Extract all chapter numbers and use the highest as chapter count
+    const nums = chLinks.map((m) => {
+      const n = m.match(/chapter-(\d+)/);
+      return n ? parseInt(n[1], 10) : 0;
+    });
+    const maxChapter = Math.max(...nums);
+    meta.chapterCount = maxChapter > 0 ? maxChapter : new Set(chLinks).size;
   }
 
-  // Last chapter (first in list)
-  const lastChMatch = html.match(/Chapter\s+(\d+)/);
-  if (lastChMatch) meta.lastChapter = lastChMatch[1];
+  // Last chapter
+  if (meta.chapterCount > 0) {
+    meta.lastChapter = String(meta.chapterCount);
+  }
 
   // Description: Official Synopsis section, or fallback to meta description
   const synopsisMatch = html.match(/Official Synopsis[\s\S]*?<\/h3>\s*<[^>]*>([\s\S]*?)<\/(?:div|p)>/i);
@@ -415,6 +359,161 @@ function parseManhwazone(html: string, meta: PreviewMeta) {
   // Suppress rank/pop (unused vars)
   void rankMatch;
   void popMatch;
+}
+
+function parseMangaBuddy(html: string, meta: PreviewMeta) {
+  // Status: <strong>Status :</strong> <a ...><span>Completed</span></a>
+  const statusMatch = html.match(/Status\s*:<\/strong>\s*<a[^>]*>\s*<span>([^<]+)/i);
+  if (statusMatch) meta.status = statusMatch[1].trim();
+
+  // Authors: <strong>Authors :</strong> <a ...><span>Name</span></a>
+  const authorMatch = html.match(/Authors\s*:<\/strong>[\s\S]*?<span>([^<]+)/i);
+  if (authorMatch) meta.author = authorMatch[1].trim();
+
+  // Genres: <strong>Genres :</strong> <a href="/genres/action">Action</a>
+  const genreSection = html.match(/Genres\s*:<\/strong>([\s\S]*?)<\/p>/i);
+  if (genreSection) {
+    const genreRe = /href="\/genres\/[^"]*"[^>]*>\s*([^<,]+)/gi;
+    let gm;
+    while ((gm = genreRe.exec(genreSection[1])) !== null) {
+      const g = gm[1].trim();
+      if (g && !meta.genres.includes(g)) meta.genres.push(g);
+    }
+  }
+  meta.genres = meta.genres.slice(0, 12);
+
+  // Chapter count from chapter links
+  const chLinks = html.match(/href="[^"]*\/chapter-[^"]*"/g);
+  if (chLinks) {
+    const nums = chLinks.map((m) => {
+      const n = m.match(/chapter-(\d+(?:\.\d+)?)/);
+      return n ? parseFloat(n[1]) : 0;
+    });
+    const maxCh = Math.max(...nums);
+    meta.chapterCount = maxCh > 0 ? Math.round(maxCh) : new Set(chLinks).size;
+  }
+
+  // Description
+  const mbDescMatch = html.match(/class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  if (mbDescMatch) {
+    const cleaned = mbDescMatch[1].replace(/<[^>]+>/g, "").trim();
+    if (cleaned.length > 20) meta.description = cleaned;
+  }
+
+  meta.type = "Manga";
+}
+
+// ── WeebCentral preview ──
+
+async function previewWeebCentral(sourceUrl: string, sourceId: string): Promise<PreviewMeta> {
+  const meta = emptyMeta();
+  meta.availableLanguages = ["en"];
+
+  const resp = await fetch(sourceUrl);
+  if (!resp.ok) throw new Error(`WeebCentral ${resp.status}`);
+  const html = await resp.text();
+
+  // Title from <h1>
+  const h1 = html.match(/<h1[^>]*>([^<]+)</);
+  meta.title = h1?.[1]?.trim() || "Unknown";
+
+  // Cover
+  meta.coverUrl = `https://temp.compsci88.com/cover/normal/${sourceId}.webp`;
+
+  // Status — "Status: " followed by <a>Complete/Ongoing</a>
+  const statusMatch = html.match(/Status:\s*<\/strong>\s*<a[^>]*>([^<]+)/i);
+  if (statusMatch) meta.status = statusMatch[1].trim();
+
+  // Author — "Author(s): " followed by <a>Name</a>
+  const authorMatch = html.match(/Author\(s\):\s*<\/strong>[\s\S]*?<a[^>]*>([^<]+)/i);
+  if (authorMatch) meta.author = authorMatch[1].trim();
+
+  // Description — "Description" section followed by text
+  const descMatch = html.match(/Description[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i);
+  if (descMatch) {
+    meta.description = descMatch[1].replace(/<[^>]+>/g, "").trim();
+  }
+
+  // Genres — "Tags: " followed by <a> links
+  const genreSection = html.match(/Tags:[\s\S]*?<\/li>/i);
+  if (genreSection) {
+    const genreRe = /<a[^>]*>([^<]+)<\/a>/gi;
+    let gm;
+    while ((gm = genreRe.exec(genreSection[0])) !== null) {
+      const g = gm[1].trim();
+      if (g && !meta.genres.includes(g)) meta.genres.push(g);
+    }
+  }
+  meta.genres = meta.genres.slice(0, 12);
+
+  // Chapter count from chapter links
+  const chLinks = html.match(/href="[^"]*\/chapters\/[A-Z0-9]+"/g);
+  meta.chapterCount = chLinks ? new Set(chLinks).size : 0;
+
+  meta.type = "Manga";
+  return meta;
+}
+
+// ── Atsumaru preview ──
+
+async function previewAtsumaru(sourceId: string): Promise<PreviewMeta> {
+  const meta = emptyMeta();
+
+  const resp = await fetch(`https://atsu.moe/api/manga/page?id=${sourceId}`);
+  if (!resp.ok) throw new Error(`Atsumaru ${resp.status}`);
+  const data = await resp.json();
+  const manga = data.mangaPage;
+
+  meta.title = manga.englishTitle || manga.title || "Unknown";
+
+  // Alt titles
+  if (manga.otherNames && Array.isArray(manga.otherNames)) {
+    meta.altTitles = manga.otherNames.slice(0, 10);
+  }
+
+  // Cover
+  const poster = manga.poster;
+  if (poster?.mediumImage) {
+    meta.coverUrl = `https://atsu.moe/${poster.mediumImage}`;
+  } else if (poster?.smallImage) {
+    meta.coverUrl = `https://atsu.moe/${poster.smallImage}`;
+  }
+
+  // Status
+  meta.status = manga.status || "Unknown";
+
+  // Authors
+  if (manga.authors && Array.isArray(manga.authors)) {
+    meta.author = manga.authors.map((a: { name?: string }) => a.name || "").filter(Boolean).join(", ");
+  }
+
+  // Genres
+  if (manga.genres && Array.isArray(manga.genres)) {
+    meta.genres = manga.genres.map((g: { name: string }) => g.name).slice(0, 12);
+  }
+
+  // Type
+  meta.type = manga.type || "";
+
+  // Year
+  if (manga.released) {
+    meta.year = new Date(manga.released).getFullYear();
+  }
+
+  // Views
+  meta.views = manga.views || "";
+
+  // Chapter count
+  try {
+    const chResp = await fetch(`https://atsu.moe/api/manga/allChapters?mangaId=${sourceId}`);
+    if (chResp.ok) {
+      const chData = await chResp.json();
+      meta.chapterCount = Array.isArray(chData.chapters) ? chData.chapters.length : 0;
+    }
+  } catch { /* ignore */ }
+
+  meta.availableLanguages = ["en"];
+  return meta;
 }
 
 function decodeEntities(str: string): string {
@@ -445,6 +544,12 @@ export async function GET(req: NextRequest) {
 
     if (source === "mangadex" && sourceId) {
       meta = await previewMangaDex(sourceId, lang);
+    } else if (source === "atsumaru" && sourceId) {
+      meta = await previewAtsumaru(sourceId);
+    } else if (source === "weebcentral") {
+      meta = await previewWeebCentral(sourceUrl, sourceId || "");
+    } else if (source === "mangabuddy") {
+      meta = await previewHtmlSource(sourceUrl, source);
     } else {
       meta = await previewHtmlSource(sourceUrl, source);
     }

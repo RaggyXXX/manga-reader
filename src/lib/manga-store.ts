@@ -1,7 +1,7 @@
 const SERIES_KEY = "manga-series";
 const CHAPTERS_KEY = "manga-chapters";
 
-export type MangaSource = "manhwazone" | "mangadex" | "mangakatana" | "vymanga";
+export type MangaSource = "manhwazone" | "mangadex" | "mangakatana" | "weebcentral" | "atsumaru" | "mangabuddy";
 export type ReadingStatus = "reading" | "plan_to_read" | "completed" | "on_hold" | "dropped";
 
 export interface StoredSeries {

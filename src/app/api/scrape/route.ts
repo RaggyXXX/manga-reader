@@ -10,15 +10,17 @@ const ALLOWED_HOSTS = [
   "c4.manhwatop.com",
   "media.manhwazone.to",
   "official.lowee.us",
+  "hot.planeptune.us",
   "mangakatana.com",
   "www.mangakatana.com",
   "i1.mangakatana.com",
   "i2.mangakatana.com",
   "i3.mangakatana.com",
-  "vymanga.com",
-  "www.vymanga.com",
-  "cdnxyz.xyz",
-  "vycdn.net",
+  "weebcentral.com",
+  "www.weebcentral.com",
+  "temp.compsci88.com",
+  "mangabuddy.com",
+  "www.mangabuddy.com",
 ];
 
 export async function GET(req: NextRequest) {
