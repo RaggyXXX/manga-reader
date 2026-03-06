@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { BarChart3, BookOpen, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,9 +10,12 @@ const items = [
   { href: "/stats", label: "Stats", icon: BarChart3, tourId: "mobile-stats" },
 ];
 
-export function MobileNav() {
-  const pathname = usePathname();
+interface MobileNavProps {
+  activeTab?: string;
+  onNavigate?: (path: string) => void;
+}
 
+export function MobileNav({ activeTab, onNavigate }: MobileNavProps) {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-card/95 px-3 pb-2 pt-2 backdrop-blur md:hidden"
@@ -23,17 +24,18 @@ export function MobileNav() {
     >
       <ul className="mx-auto flex max-w-xl items-center justify-between gap-2">
         {items.map((item) => {
-          const active = pathname === item.href;
+          const active = activeTab === item.href;
           const Icon = item.icon;
 
           return (
             <li key={item.href} className="flex-1">
-              <Link
-                href={item.href}
+              <button
+                type="button"
                 data-tour={item.tourId}
                 aria-current={active ? "page" : undefined}
+                onClick={() => onNavigate?.(item.href)}
                 className={cn(
-                  "relative flex items-center justify-center gap-1.5 overflow-hidden rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
+                  "relative flex w-full items-center justify-center gap-1.5 overflow-hidden rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -48,7 +50,7 @@ export function MobileNav() {
                 ) : null}
                 <Icon className="relative z-10 h-5 w-5" />
                 <span className="relative z-10">{item.label}</span>
-              </Link>
+              </button>
             </li>
           );
         })}
