@@ -18,11 +18,15 @@ interface MobileNavProps {
 export function MobileNav({ activeTab, onNavigate }: MobileNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-card/95 px-3 pb-2 pt-2 backdrop-blur md:hidden"
-      style={{ paddingBottom: "max(0.5rem, var(--sab))", paddingLeft: "max(0.75rem, var(--sal))", paddingRight: "max(0.75rem, var(--sar))" }}
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-card/95 px-3 pt-1.5 backdrop-blur md:hidden"
+      style={{
+        paddingBottom: "max(0.45rem, var(--sab))",
+        paddingLeft: "max(0.75rem, var(--sal))",
+        paddingRight: "max(0.75rem, var(--sar))",
+      }}
       aria-label="Primary"
     >
-      <ul className="mx-auto flex max-w-xl items-center justify-between gap-2">
+      <ul className="mx-auto flex max-w-xl items-center justify-around gap-1">
         {items.map((item) => {
           const active = activeTab === item.href;
           const Icon = item.icon;
@@ -33,9 +37,11 @@ export function MobileNav({ activeTab, onNavigate }: MobileNavProps) {
                 type="button"
                 data-tour={item.tourId}
                 aria-current={active ? "page" : undefined}
+                aria-label={item.label}
+                title={item.label}
                 onClick={() => onNavigate?.(item.href)}
                 className={cn(
-                  "relative flex w-full items-center justify-center gap-1.5 overflow-hidden rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
+                  "relative flex h-11 w-full items-center justify-center overflow-hidden rounded-lg transition-colors",
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -49,7 +55,6 @@ export function MobileNav({ activeTab, onNavigate }: MobileNavProps) {
                   />
                 ) : null}
                 <Icon className="relative z-10 h-5 w-5" />
-                <span className="relative z-10">{item.label}</span>
               </button>
             </li>
           );

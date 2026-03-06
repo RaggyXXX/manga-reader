@@ -89,7 +89,18 @@ test("series route renders", async ({ page }) => {
 test("mobile nav marks active destination", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/add");
-  await expect(page.getByRole("link", { name: /^add$/i })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: /^add$/i })).toHaveAttribute("aria-current", "page");
+});
+
+test("mobile nav uses icon-only buttons", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const navButtons = page.locator('nav[aria-label="Primary"] button');
+  await expect(navButtons).toHaveCount(3);
+  await expect(navButtons.nth(0)).toHaveText("");
+  await expect(navButtons.nth(1)).toHaveText("");
+  await expect(navButtons.nth(2)).toHaveText("");
 });
 
 test("series page shows quick continue action", async ({ page }) => {

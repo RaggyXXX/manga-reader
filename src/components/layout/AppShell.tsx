@@ -213,7 +213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
       <main
         className="mx-auto w-full max-w-5xl px-4 pt-6 md:pb-8"
-        style={{ paddingBottom: "calc(6rem + var(--sab))", paddingLeft: "max(1rem, var(--sal))", paddingRight: "max(1rem, var(--sar))" }}
+        style={{ paddingBottom: "calc(4.75rem + var(--sab))", paddingLeft: "max(1rem, var(--sal))", paddingRight: "max(1rem, var(--sar))" }}
       >
         {/* Persistent tabs */}
         <div style={{ display: isOnTabPage && activeTab === "/" ? "contents" : "none" }}>

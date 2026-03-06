@@ -42,9 +42,10 @@ export function SyncProgressBar() {
   return (
     <div className="sticky top-16 z-40 mx-auto mb-2 w-full max-w-5xl px-4">
       <div className="relative overflow-hidden rounded-xl border border-border bg-card px-3 py-2">
+        <div className="absolute inset-0 bg-muted/30" />
         <div
-          className={`absolute inset-y-0 left-0 rounded-r-xl bg-primary/20 ${isDiscovering ? "animate-pulse" : ""}`}
-          style={isDiscovering ? undefined : { width: `${pct}%` }}
+          className={`absolute inset-y-0 left-0 rounded-r-xl bg-primary/15 ${isDiscovering ? "animate-pulse" : ""}`}
+          style={isDiscovering ? { width: "35%" } : { width: `${pct}%` }}
         />
         <div className="relative flex items-center justify-between gap-2">
           <span className="text-xs font-medium text-foreground">
