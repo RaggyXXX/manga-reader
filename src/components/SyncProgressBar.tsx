@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 
 export function SyncProgressBar() {
   const pathname = usePathname();
-  const { phase, discovered, completed, total, error, stopSync } = useSyncContext();
+  const { phase, slug: syncSlug, discovered, completed, total, error, stopSync } = useSyncContext();
   const isReaderRoute = pathname.startsWith("/read/");
+  const isCurrentSyncSeriesPage = Boolean(syncSlug) && pathname === `/series/${syncSlug}`;
 
   if (phase === "idle") return null;
 
@@ -38,6 +39,23 @@ export function SyncProgressBar() {
 
   const isDiscovering = phase === "discovering";
   const pct = isDiscovering ? 100 : total > 0 ? (completed / total) * 100 : 0;
+
+  // Global, lightweight bar for all non-reader pages except the currently synced series page.
+  // The series page already has its own dedicated sync control with progress feedback.
+  if (!isCurrentSyncSeriesPage) {
+    return (
+      <div
+        data-testid="global-sync-slim"
+        className="fixed left-0 right-0 z-40 h-[3px] overflow-hidden bg-muted/35"
+        style={{ bottom: "calc(49px + var(--sab, 0px))" }}
+      >
+        <div
+          className={`h-full bg-primary/70 transition-all duration-500 ${isDiscovering ? "animate-pulse" : ""}`}
+          style={isDiscovering ? { width: "35%" } : { width: `${pct}%` }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="sticky top-16 z-40 mx-auto mb-2 w-full max-w-5xl px-4">

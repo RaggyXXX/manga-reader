@@ -31,6 +31,7 @@ const seededChapters = {
   },
 };
 
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(
     ({ series, chapters }) => {
@@ -67,13 +68,13 @@ test("theme toggle persists preference", async ({ page }) => {
 
 test("add route renders", async ({ page }) => {
   await page.goto("/add");
-  await expect(page.getByRole("heading", { name: /add series/i })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /search manga/i })).toBeVisible();
 });
 
-test("add page exposes search and url tabs", async ({ page }) => {
+test("add page exposes search input and source filter", async ({ page }) => {
   await page.goto("/add");
-  await expect(page.getByRole("tab", { name: /search/i })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /url/i })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /search manga/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /all sources/i })).toBeVisible();
 });
 
 test("stats route renders", async ({ page }) => {

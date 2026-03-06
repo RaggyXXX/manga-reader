@@ -6,6 +6,7 @@ import { ArrowDownAZ, ArrowUpZA, ChevronDown, Filter, Loader2, Search, Sparkles,
 import { discoverSeries, imageProxyUrl } from "@/lib/scraper";
 import { getAllSeries, saveSeries, type MangaSource } from "@/lib/manga-store";
 import { SearchResultCard } from "@/components/SearchResultCard";
+import { FeaturedMangaCard } from "@/components/FeaturedMangaCard";
 import { PreviewModal } from "@/components/PreviewModal";
 import { Input } from "@/components/ui/input";
 
@@ -45,6 +46,9 @@ export function AddSeriesPage() {
 function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [featured, setFeatured] = useState<SearchResult[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [partialErrors, setPartialErrors] = useState<string[]>([]);
@@ -120,6 +124,38 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, doSearch]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFeatured() {
+      setFeaturedLoading(true);
+      setFeaturedError(null);
+
+      try {
+        const resp = await fetch("/api/featured");
+        if (!resp.ok) throw new Error(`Featured failed: ${resp.status}`);
+        const data = await resp.json();
+        if (!cancelled) {
+          setFeatured(data.results || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setFeatured([]);
+          setFeaturedError(err instanceof Error ? err.message : "Failed to load featured manga");
+        }
+      } finally {
+        if (!cancelled) {
+          setFeaturedLoading(false);
+        }
+      }
+    }
+
+    loadFeatured();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -388,6 +424,44 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
         <p className="text-sm text-muted-foreground">Enter at least 2 characters</p>
       ) : null}
 
+      {!searching && !searched && query.trim().length === 0 ? (
+        <section className="space-y-3" aria-label="Featured manga">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">Featured</h2>
+              <p className="text-sm text-muted-foreground">20 popular manga right now</p>
+            </div>
+            <Sparkles className="h-5 w-5 text-primary" />
+          </div>
+
+          {featuredLoading ? (
+            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              Loading featured manga...
+            </div>
+          ) : null}
+
+          {!featuredLoading && featuredError ? (
+            <p className="text-sm text-muted-foreground">Featured manga could not be loaded right now.</p>
+          ) : null}
+
+          {!featuredLoading && !featuredError && featured.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {featured.map((item, index) => (
+                <FeaturedMangaCard
+                  key={`${item.source}-${item.sourceUrl}-${index}`}
+                  title={item.title}
+                  coverUrl={item.coverUrl}
+                  source={item.source}
+                  chapterCount={item.chapterCount}
+                  onClick={() => handleClickResult(item)}
+                />
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       {preview ? (
         <PreviewModal
           data={preview}
@@ -401,4 +475,3 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
 }
 
 export default AddSeriesPage;
-
