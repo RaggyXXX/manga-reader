@@ -143,13 +143,13 @@ export function PreviewModal({ data, onAdd, onClose, adding }: PreviewModalProps
     : imgSrc;
 
   return (
-    <div className="fixed inset-0 z-[90] bg-black/45 p-3 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="fixed inset-0 z-[90] bg-black/45 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[2px]" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
         transition={motionOrInstant(!!reduced, 0.2)}
-        className="mx-auto flex h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
+        className="mx-auto flex h-[calc(100dvh-max(0.75rem,env(safe-area-inset-top))-0.75rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-border p-4">
