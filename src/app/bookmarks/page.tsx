@@ -4,12 +4,11 @@ import { useEffect, useState, useMemo } from "react";
 import { getAllBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmark-store";
 import { getSeries, getChapter } from "@/lib/manga-store";
 import { imageProxyUrl } from "@/lib/scraper";
-import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bookmark as BookmarkIcon, Filter } from "lucide-react";
 import Link from "next/link";
 
-export default function BookmarksPage() {
+export function BookmarksPage() {
   const [allBookmarks, setAllBookmarks] = useState(() => getAllBookmarks());
   const [filterSlug, setFilterSlug] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
@@ -55,12 +54,9 @@ export default function BookmarksPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <ContextBackChevron className="shrink-0" />
-        <div className="flex items-center gap-2">
-          <BookmarkIcon className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Bookmarks</h1>
-        </div>
+      <div className="flex items-center gap-2">
+        <BookmarkIcon className="h-5 w-5 text-primary" />
+        <h1 className="text-2xl font-bold tracking-tight">Bookmarks</h1>
       </div>
 
       {/* Series filter */}
@@ -176,3 +172,5 @@ export default function BookmarksPage() {
     </div>
   );
 }
+
+export default BookmarksPage;

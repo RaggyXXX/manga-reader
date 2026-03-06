@@ -7,7 +7,6 @@ import { getReadingStats } from "@/lib/reading-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 import { useTour } from "@/contexts/TourContext";
 import Link from "next/link";
 
@@ -31,7 +30,7 @@ function formatReadingTime(minutes: number): string {
   return `${hours} hr ${remaining} min`;
 }
 
-export default function StatsPage() {
+export function StatsPage() {
   const { startTour } = useTour();
   const [, setRefreshKey] = useState(0);
   const stats = getReadingStats();
@@ -67,12 +66,9 @@ export default function StatsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <ContextBackChevron className="shrink-0" />
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Reading Stats</h1>
-        </div>
+      <div className="flex items-center gap-2">
+        <BarChart3 className="h-5 w-5 text-primary" />
+        <h1 className="text-2xl font-bold tracking-tight">Reading Stats</h1>
       </div>
 
       {hasData ? (
@@ -210,3 +206,5 @@ function Metric({ icon: Icon, label, value }: { icon: ComponentType<{ className?
     </Card>
   );
 }
+
+export default StatsPage;

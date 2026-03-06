@@ -2,18 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LinkIcon, Search, Sparkles, X } from "lucide-react";
-import { discoverSeries, detectSource, imageProxyUrl } from "@/lib/scraper";
+import { ArrowDownAZ, ArrowUpZA, ChevronDown, Filter, Loader2, Search, Sparkles, X } from "lucide-react";
+import { discoverSeries, imageProxyUrl } from "@/lib/scraper";
 import { getAllSeries, saveSeries, type MangaSource } from "@/lib/manga-store";
 import { SearchResultCard } from "@/components/SearchResultCard";
 import { PreviewModal } from "@/components/PreviewModal";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 
 interface SearchResult {
   title: string;
@@ -22,78 +16,28 @@ interface SearchResult {
   source: MangaSource;
   sourceId?: string;
   availableLanguages?: string[];
+  chapterCount?: number;
 }
 
-type Mode = "search" | "url";
+type SortMode = "relevance" | "a-z" | "z-a" | "chapters-desc" | "chapters-asc";
 
 const SOURCE_FILTERS: { key: MangaSource | "all"; label: string; color: string }[] = [
   { key: "all", label: "All sources", color: "#b57f44" },
   { key: "mangadex", label: "MangaDex", color: "#ff6740" },
   { key: "mangakatana", label: "MangaKatana", color: "#4a90d9" },
-  { key: "vymanga", label: "VyManga", color: "#6bc95b" },
   { key: "manhwazone", label: "Manhwazone", color: "#e8a849" },
+  { key: "weebcentral", label: "WeebCentral", color: "#7c3aed" },
+  { key: "atsumaru", label: "Atsumaru", color: "#10b981" },
+  { key: "mangabuddy", label: "MangaBuddy", color: "#f43f5e" },
 ];
 
-const SOURCES = [
-  { name: "MangaDex", domain: "mangadex.org", color: "#ff6740" },
-  { name: "MangaKatana", domain: "mangakatana.com", color: "#4a90d9" },
-  { name: "VyManga", domain: "vymanga.com", color: "#6bc95b" },
-  { name: "Manhwazone", domain: "manhwazone.to", color: "#e8a849" },
-];
 
-export default function AddSeriesPage() {
-  const [mode, setMode] = useState<Mode>("search");
+export function AddSeriesPage() {
   const router = useRouter();
 
   return (
     <div className="space-y-5">
-      <header className="flex items-start gap-3">
-        <ContextBackChevron className="mt-0.5 shrink-0" />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Add Series</h1>
-          <p className="text-sm text-muted-foreground">Search across sources or add directly with a URL.</p>
-        </div>
-      </header>
-
-      <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>
-        <TabsList>
-          <TabsTrigger value="search" data-tour="add-search-tab">
-            <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Search</span>
-          </TabsTrigger>
-          <TabsTrigger value="url" data-tour="add-url-tab">
-            <span className="inline-flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL</span>
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="search">
-          <SearchMode router={router} />
-        </TabsContent>
-        <TabsContent value="url">
-          <UrlMode router={router} />
-        </TabsContent>
-      </Tabs>
-
-      <details open className="group overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Supported sources</p>
-            <p className="mt-0.5 text-sm text-foreground/90">MangaDex, MangaKatana, VyManga, Manhwazone</p>
-          </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="border-t border-border/70 p-4 pt-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {SOURCES.map((s) => (
-              <div key={s.name} className="flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
-                <div>
-                  <p className="text-sm font-medium">{s.name}</p>
-                  <p className="text-xs text-muted-foreground">{s.domain}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </details>
+      <SearchMode router={router} />
     </div>
   );
 }
@@ -108,11 +52,14 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [error, setError] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<MangaSource | "all">("all");
   const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [preview, setPreview] = useState<SearchResult | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>("relevance");
+  const [minChapters, setMinChapters] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const sortDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const doSearch = useCallback(async (q: string) => {
     abortRef.current?.abort();
@@ -149,6 +96,9 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     }
   }, []);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Live search with debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -164,30 +114,52 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
 
     debounceRef.current = setTimeout(() => {
       doSearch(query.trim());
-    }, 350);
+    }, 400);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, doSearch]);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setSourceDropdownOpen(false);
       }
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
+        setSortDropdownOpen(false);
+      }
     }
-    if (sourceDropdownOpen) {
+    if (sourceDropdownOpen || sortDropdownOpen) {
       document.addEventListener("mousedown", handleClick);
       return () => document.removeEventListener("mousedown", handleClick);
     }
-  }, [sourceDropdownOpen]);
+  }, [sourceDropdownOpen, sortDropdownOpen]);
 
-  const filtered = useMemo(
-    () => (sourceFilter === "all" ? results : results.filter((r) => r.source === sourceFilter)),
-    [results, sourceFilter],
-  );
+  const filtered = useMemo(() => {
+    let list = sourceFilter === "all" ? results : results.filter((r) => r.source === sourceFilter);
+
+    // Apply min chapters filter
+    if (minChapters > 0) {
+      list = list.filter((r) => (r.chapterCount ?? 0) >= minChapters);
+    }
+
+    // Apply sorting
+    if (sortMode !== "relevance") {
+      list = [...list].sort((a, b) => {
+        switch (sortMode) {
+          case "a-z": return a.title.localeCompare(b.title);
+          case "z-a": return b.title.localeCompare(a.title);
+          case "chapters-desc": return (b.chapterCount ?? 0) - (a.chapterCount ?? 0);
+          case "chapters-asc": return (a.chapterCount ?? 0) - (b.chapterCount ?? 0);
+          default: return 0;
+        }
+      });
+    }
+
+    return list;
+  }, [results, sourceFilter, sortMode, minChapters]);
 
   const handleClickResult = (result: SearchResult) => {
     const existing = getAllSeries();
@@ -240,122 +212,175 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     }
   };
 
+  const SORT_OPTIONS: { key: SortMode; label: string; icon?: React.ReactNode }[] = [
+    { key: "relevance", label: "Relevance" },
+    { key: "a-z", label: "Title A-Z", icon: <ArrowDownAZ className="h-3.5 w-3.5" /> },
+    { key: "z-a", label: "Title Z-A", icon: <ArrowUpZA className="h-3.5 w-3.5" /> },
+    { key: "chapters-desc", label: "Most chapters" },
+    { key: "chapters-asc", label: "Fewest chapters" },
+  ];
+
   return (
     <>
-      <Card>
-        <CardContent className="space-y-3 p-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search manga..."
-              className="pl-9 pr-10"
-              autoFocus
-              ref={inputRef}
-            />
-            {query.trim().length > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  inputRef.current?.focus();
-                }}
-                className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            ) : null}
-          </div>
-
-          <div className="relative" ref={dropdownRef}>
+      <div className="space-y-3">
+        {/* Search input */}
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search manga..."
+            className="pl-9 pr-10"
+            autoFocus
+            ref={inputRef}
+          />
+          {query.trim().length > 0 ? (
             <button
               type="button"
-              onClick={() => setSourceDropdownOpen((v) => !v)}
-              className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+              onClick={() => {
+                setQuery("");
+                setResults([]);
+                setSearched(false);
+                setError(null);
+                setPartialErrors([]);
+                inputRef.current?.focus();
+              }}
+              className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Clear search"
             >
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full" style={{ background: SOURCE_FILTERS.find((sf) => sf.key === sourceFilter)?.color }} />
-                {SOURCE_FILTERS.find((sf) => sf.key === sourceFilter)?.label}
-              </span>
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${sourceDropdownOpen ? "rotate-180" : ""}`} />
+              <X className="h-4 w-4" />
             </button>
-            {sourceDropdownOpen && (
-              <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg">
-                {SOURCE_FILTERS.map((sf) => (
+          ) : null}
+        </div>
+
+        {/* Source filter */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setSourceDropdownOpen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+          >
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full" style={{ background: SOURCE_FILTERS.find((sf) => sf.key === sourceFilter)?.color }} />
+              {SOURCE_FILTERS.find((sf) => sf.key === sourceFilter)?.label}
+            </span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${sourceDropdownOpen ? "rotate-180" : ""}`} />
+          </button>
+          {sourceDropdownOpen && (
+            <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+              {SOURCE_FILTERS.map((sf) => (
+                <button
+                  key={sf.key}
+                  type="button"
+                  onClick={() => { setSourceFilter(sf.key); setSourceDropdownOpen(false); }}
+                  className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                    sourceFilter === sf.key
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ background: sf.color }} />
+                  {sf.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {partialErrors.length > 0 ? (
+          <p className="text-xs text-amber-700">Some sources are unavailable: {partialErrors.join(", ")}</p>
+        ) : null}
+      </div>
+
+      {/* Loading spinner */}
+      {searching ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Searching across sources...</p>
+        </div>
+      ) : null}
+
+      {/* Sort + filter toolbar */}
+      {!searching && searched && results.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Sort dropdown */}
+          <div className="relative" ref={sortDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setSortDropdownOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+            >
+              <ArrowDownAZ className="h-3.5 w-3.5 text-muted-foreground" />
+              {SORT_OPTIONS.find((o) => o.key === sortMode)?.label}
+              <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${sortDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {sortDropdownOpen && (
+              <div className="absolute left-0 z-20 mt-1 min-w-[160px] overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+                {SORT_OPTIONS.map((opt) => (
                   <button
-                    key={sf.key}
+                    key={opt.key}
                     type="button"
-                    onClick={() => { setSourceFilter(sf.key); setSourceDropdownOpen(false); }}
-                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                      sourceFilter === sf.key
+                    onClick={() => { setSortMode(opt.key); setSortDropdownOpen(false); }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors ${
+                      sortMode === opt.key
                         ? "bg-primary/10 font-medium text-primary"
                         : "text-foreground hover:bg-muted/50"
                     }`}
                   >
-                    <span className="h-2 w-2 rounded-full" style={{ background: sf.color }} />
-                    {sf.label}
+                    {opt.icon || <span className="h-3.5 w-3.5" />}
+                    {opt.label}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {partialErrors.length > 0 ? (
-            <p className="text-xs text-amber-700">Some sources are unavailable: {partialErrors.join(", ")}</p>
-          ) : null}
-        </CardContent>
-      </Card>
+          {/* Min chapters filter */}
+          <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            <label className="text-xs text-muted-foreground whitespace-nowrap">Min chapters</label>
+            <input
+              type="number"
+              min={0}
+              max={9999}
+              value={minChapters || ""}
+              onChange={(e) => setMinChapters(Math.max(0, parseInt(e.target.value) || 0))}
+              placeholder="0"
+              className="w-14 bg-transparent text-xs font-medium text-foreground outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+          </div>
 
-      {searching ? (
-        <div className="grid gap-3">
-          {[0, 1, 2].map((i) => (
-            <Card key={i}>
-              <CardContent className="flex items-center gap-3 p-3">
-                <Skeleton className="h-24 w-16 rounded-md" />
-                <div className="w-full space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {/* Result count */}
+          <span className="ml-auto text-xs text-muted-foreground">
+            {filtered.length} of {results.length} result{results.length === 1 ? "" : "s"}
+          </span>
         </div>
       ) : null}
 
       {!searching && searched && filtered.length === 0 && !error ? (
-        <Card>
-          <CardContent className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-            <Sparkles className="h-4 w-4" />
-            No results found
-          </CardContent>
-        </Card>
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Sparkles className="h-4 w-4" />
+          {results.length > 0 ? "No results match your filters" : "No results found"}
+        </p>
       ) : null}
 
       {!searching && filtered.length > 0 ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{filtered.length} result{filtered.length === 1 ? "" : "s"}</span>
-            <span>{sourceFilter === "all" ? "All sources" : `Source: ${sourceFilter}`}</span>
-          </div>
-          <div className="grid gap-3">
+        <div className="grid gap-3">
           {filtered.map((r, i) => (
             <SearchResultCard
               key={`${r.source}-${r.sourceUrl}-${i}`}
               title={r.title}
               coverUrl={r.coverUrl}
               source={r.source}
+              chapterCount={r.chapterCount}
               availableLanguages={r.availableLanguages}
               loading={addingUrl === r.sourceUrl}
               disabled={addingUrl !== null}
               onClick={() => handleClickResult(r)}
             />
           ))}
-          </div>
         </div>
       ) : null}
 
@@ -375,89 +400,5 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   );
 }
 
-function UrlMode({ router }: { router: ReturnType<typeof useRouter> }) {
-  const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default AddSeriesPage;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const trimmedUrl = url.trim();
-      const source = detectSource(trimmedUrl);
-      const supported = ["manhwazone", "mangadex", "mangakatana", "vymanga"];
-      if (!supported.includes(source)) {
-        setError("Unsupported source. Supported: MangaDex, MangaKatana, VyManga, Manhwazone");
-        setLoading(false);
-        return;
-      }
-
-      const discovered = await discoverSeries(trimmedUrl);
-      const slug = discovered.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-
-      const newSeries = {
-        slug,
-        title: discovered.title,
-        coverUrl: discovered.coverUrl,
-        sourceUrl: discovered.sourceUrl,
-        totalChapters: 0,
-        addedAt: Date.now(),
-        source: discovered.source,
-        sourceId: discovered.sourceId,
-      };
-      saveSeries(newSeries);
-
-      // Pre-cache cover image
-      if (discovered.coverUrl) {
-        fetch(imageProxyUrl(discovered.coverUrl, discovered.source)).catch(() => {});
-      }
-
-      router.push(`/series/${slug}`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Failed to load series: ${msg}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Card>
-      <CardContent className="space-y-3 p-4">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Manga URL</label>
-            <Input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://mangadex.org/title/... or manhwazone.to/series/..."
-              disabled={loading}
-              autoFocus
-            />
-          </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="w-full" disabled={loading || !url.trim()}>
-            {loading ? "Loading series..." : "Discover series"}
-          </Button>
-        </form>
-
-        <div className="flex flex-wrap gap-2">
-          {SOURCES.map((source) => (
-            <Badge key={source.name} variant="outline" className="text-[11px]">
-              {source.name}
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

@@ -62,8 +62,10 @@ const SORT_OPTIONS: SortOption[] = ["last_read", "recently_added", "alphabetical
 const SOURCE_LABELS: Record<MangaSource, string> = {
   mangadex: "MangaDex",
   mangakatana: "MangaKatana",
-  vymanga: "VyManga",
   manhwazone: "Manhwazone",
+  weebcentral: "WeebCentral",
+  atsumaru: "Atsumaru",
+  mangabuddy: "MangaBuddy",
 };
 
 const STATUS_LABELS: Record<ReadingStatus, string> = {
@@ -74,7 +76,7 @@ const STATUS_LABELS: Record<ReadingStatus, string> = {
   dropped: "Dropped",
 };
 
-export default function LibraryPage() {
+export function LibraryPage() {
   const { updateFlags } = useSyncContext();
   const [series, setSeries] = useState<StoredSeries[]>(() => getAllSeries());
   const [prefs, setPrefs] = useState(() => getLibraryPrefs());
@@ -452,16 +454,14 @@ export default function LibraryPage() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: "easeOut" }}
-          className="flex min-h-[52vh] flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-card/70 px-6 text-center"
+          className="flex min-h-[52vh] flex-col items-center justify-center text-center"
         >
-          <div className="mb-4 rounded-2xl bg-muted p-4">
-            <LibraryBig className="h-8 w-8 text-muted-foreground" />
-          </div>
+          <LibraryBig className="mb-3 h-8 w-8 text-muted-foreground" />
           <h2 className="text-lg font-semibold text-foreground">Your library is empty</h2>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Add your first series to cache chapters and continue seamlessly across devices.
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add your first series to get started.
           </p>
-          <Link href="/add" className="mt-5" data-tour="library-add-empty">
+          <Link href="/add" className="mt-4" data-tour="library-add-empty">
             <Button>
               <Plus className="h-4 w-4" />
               Add Series
@@ -858,3 +858,5 @@ export default function LibraryPage() {
     </div>
   );
 }
+
+export default LibraryPage;

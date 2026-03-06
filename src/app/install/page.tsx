@@ -15,7 +15,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ContextBackChevron } from "@/components/navigation/ContextBackChevron";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 const BENEFITS = [
@@ -41,7 +40,7 @@ const ANDROID_STEPS = [
   { icon: CheckCircle2, title: 'Tap "Install"', desc: "Confirm the install in the dialog that appears." },
 ];
 
-export default function InstallPage() {
+export function InstallPage() {
   const { canInstallNatively, promptInstall, platform, isStandalone } = useInstallPrompt();
 
   const defaultTab = platform === "ios" ? "ios" : "android";
@@ -49,15 +48,12 @@ export default function InstallPage() {
   return (
     <div className="space-y-5" data-tour="install-page">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <ContextBackChevron className="shrink-0" />
-        <div>
-          <div className="flex items-center gap-2">
-            <Download className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">Install App</h1>
-          </div>
-          <p className="mt-0.5 text-sm text-muted-foreground">Add Manga Blast to your home screen</p>
+      <div>
+        <div className="flex items-center gap-2">
+          <Download className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight">Install App</h1>
         </div>
+        <p className="mt-0.5 text-sm text-muted-foreground">Add Manga Blast to your home screen</p>
       </div>
 
       {/* Already installed banner */}
@@ -171,3 +167,5 @@ function StepCard({
     </Card>
   );
 }
+
+export default InstallPage;
