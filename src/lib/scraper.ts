@@ -18,12 +18,15 @@ export function imageProxyUrl(url: string, source?: MangaSource): string {
     return url;
   }
 
-  // Web/PWA: proxy MangaDex images, others load directly
+  // Web/PWA: proxy images that need special headers
   if (source === "mangadex") {
     return `/api/mangadex/img?url=${encodeURIComponent(url)}`;
   }
   if (source === "atsumaru" && url.startsWith("/")) {
     return `https://atsu.moe${url}`;
+  }
+  if (source === "mangabuddy" && url.includes("mbbcdn.com")) {
+    return `/api/img-proxy?url=${encodeURIComponent(url)}`;
   }
   return url;
 }

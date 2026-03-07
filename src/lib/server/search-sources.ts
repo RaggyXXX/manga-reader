@@ -133,12 +133,18 @@ export async function searchAtsumaru(q: string): Promise<SearchResult[]> {
 
   return (data.hits || []).map((hit: Record<string, unknown>) => {
     const doc = hit.document as Record<string, unknown>;
-    const poster = doc.poster as Record<string, string> | undefined;
-    const coverUrl = poster?.mediumImage
-      ? `https://atsu.moe/${poster.mediumImage}`
-      : poster?.smallImage
-        ? `https://atsu.moe/${poster.smallImage}`
-        : "";
+    const rawPoster = doc.poster;
+    let coverUrl = "";
+    if (typeof rawPoster === "string" && rawPoster) {
+      coverUrl = rawPoster.startsWith("http") ? rawPoster : `https://atsu.moe${rawPoster}`;
+    } else if (rawPoster && typeof rawPoster === "object") {
+      const poster = rawPoster as Record<string, string>;
+      coverUrl = poster.mediumImage
+        ? `https://atsu.moe/${poster.mediumImage}`
+        : poster.smallImage
+          ? `https://atsu.moe/${poster.smallImage}`
+          : "";
+    }
 
     return {
       title: (doc.englishTitle as string) || (doc.title as string) || "Unknown",
