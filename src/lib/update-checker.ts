@@ -1,4 +1,5 @@
 import type { StoredSeries } from "./manga-store";
+import { isSourceSyncable } from "./source-health";
 
 /**
  * Lightweight check: counts remote chapters and compares to local totalChapters.
@@ -7,6 +8,8 @@ import type { StoredSeries } from "./manga-store";
 export async function checkForUpdates(series: StoredSeries): Promise<number> {
   try {
     const source = series.source || "manhwazone";
+    if (!isSourceSyncable(source)) return 0;
+
     let remoteCount = 0;
 
     if (source === "mangadex") {

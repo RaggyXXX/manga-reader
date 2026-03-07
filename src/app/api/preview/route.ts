@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithH2 } from "@/lib/server/fetch-h2";
+import { ALL_SOURCES, recordSourceFailure, recordSourceSuccess } from "@/lib/source-health";
+import type { MangaSource } from "@/lib/manga-store";
 
 export interface PreviewMeta {
   title: string;
@@ -537,6 +539,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing url or source" }, { status: 400 });
   }
 
+  const sourceName = ALL_SOURCES.includes(source as MangaSource) ? (source as MangaSource) : null;
+
   try {
     let meta: PreviewMeta;
 
@@ -552,6 +556,8 @@ export async function GET(req: NextRequest) {
       meta = await previewHtmlSource(sourceUrl, source);
     }
 
+    if (sourceName) await recordSourceSuccess(sourceName);
+
     return NextResponse.json(meta, {
       headers: {
         "Cache-Control": "no-store",
@@ -560,6 +566,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    if (sourceName) await recordSourceFailure(sourceName, message, Date.now(), "strong");
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

@@ -1,32 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithH2, postWithH2 } from "@/lib/server/fetch-h2";
+import { collectSearchResults, type SearchResult } from "@/lib/search-aggregation";
+import { syncSourceHealthFromStore } from "@/lib/source-health";
+import { recheckDueSources } from "@/lib/server/source-health-recheck";
 
-// Node.js runtime (not edge) — needs got + http2-wrapper for Manhwazone
-
-export interface SearchResult {
-  title: string;
-  coverUrl: string;
-  sourceUrl: string;
-  source: "mangadex" | "mangakatana" | "manhwazone" | "weebcentral" | "atsumaru" | "mangabuddy";
-  sourceId?: string;
-  availableLanguages?: string[];
-  chapterCount?: number;
-}
-
-interface SearchError {
-  source: string;
-  message: string;
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("Timeout")), ms);
-    promise.then(
-      (v) => { clearTimeout(timer); resolve(v); },
-      (e) => { clearTimeout(timer); reject(e); },
-    );
-  });
-}
+// Node.js runtime (not edge) ? needs got + http2-wrapper for Manhwazone
 
 // ── MangaDex ──
 
@@ -272,28 +250,6 @@ function decodeHtmlEntities(str: string): string {
 
 // ── Relevance scoring ──
 
-function relevanceScore(title: string, query: string): number {
-  const t = title.toLowerCase();
-  const q = query.toLowerCase();
-
-  // Exact match
-  if (t === q) return 100;
-  // Title starts with query
-  if (t.startsWith(q)) return 90;
-  // Exact query appears as whole segment (word boundary)
-  const wordBoundary = new RegExp(`\\b${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-  if (wordBoundary.test(t)) return 80;
-  // Query is contained in title
-  if (t.includes(q)) return 70;
-  // All query words appear in title
-  const qWords = q.split(/\s+/);
-  const allWordsMatch = qWords.every((w) => t.includes(w));
-  if (allWordsMatch) return 60;
-  // Some query words match
-  const matchCount = qWords.filter((w) => t.includes(w)).length;
-  return (matchCount / qWords.length) * 50;
-}
-
 // ── Main handler ──
 
 export async function GET(req: NextRequest) {
@@ -305,7 +261,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const sources = [
+  await syncSourceHealthFromStore();
+  await recheckDueSources();
+
+  const sources: Array<{ name: SearchResult["source"]; fn: () => Promise<SearchResult[]> }> = [
     { name: "mangadex", fn: () => searchMangaDex(q) },
     { name: "mangakatana", fn: () => searchMangaKatana(q) },
     { name: "manhwazone", fn: () => searchManhwazone(q) },
@@ -314,26 +273,7 @@ export async function GET(req: NextRequest) {
     { name: "mangabuddy", fn: () => searchMangaBuddy(q) },
   ];
 
-  const settled = await Promise.allSettled(
-    sources.map((s) => withTimeout(s.fn(), 8000)),
-  );
-
-  const results: SearchResult[] = [];
-  const errors: SearchError[] = [];
-
-  settled.forEach((result, i) => {
-    if (result.status === "fulfilled") {
-      results.push(...result.value);
-    } else {
-      errors.push({
-        source: sources[i].name,
-        message: result.reason?.message || "Unknown error",
-      });
-    }
-  });
-
-  // Sort by relevance: best title match first
-  results.sort((a, b) => relevanceScore(b.title, q) - relevanceScore(a.title, q));
+  const { results, errors } = await collectSearchResults(q, sources);
 
   return NextResponse.json(
     { results, errors },

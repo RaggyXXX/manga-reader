@@ -36,6 +36,8 @@ import { QuickContinue } from "@/components/QuickContinue";
 import { BatchActionBar } from "@/components/BatchActionBar";
 import { Button } from "@/components/ui/button";
 import { useSyncContext } from "@/contexts/SyncContext";
+import { getSourceNoticeFromAvailability } from "@/lib/source-health";
+import { useSourceAvailabilityMap } from "@/lib/use-source-availability";
 import {
   getFolderTree,
   syncWithSeries,
@@ -75,6 +77,7 @@ const STATUS_LABELS: Record<ReadingStatus, string> = {
 
 export function LibraryPage() {
   const { updateFlags } = useSyncContext();
+  const sourceAvailability = useSourceAvailabilityMap();
   const [series, setSeries] = useState<StoredSeries[]>(() => getAllSeries());
   const [prefs, setPrefs] = useState(() => getLibraryPrefs());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -736,6 +739,7 @@ export function LibraryPage() {
                         onLongPress={!selectionMode ? handleLongPress : undefined}
                         updateCount={updateFlags[s.slug]?.newCount}
                         variant={viewMode}
+                        sourceNotice={s.source ? getSourceNoticeFromAvailability(sourceAvailability[s.source] ?? { status: "healthy" }) : null}
                       />
                     ))}
                   </div>
@@ -771,6 +775,7 @@ export function LibraryPage() {
                         onLongPress={!selectionMode ? handleLongPress : undefined}
                         updateCount={updateFlags[s.slug]?.newCount}
                         variant={viewMode}
+                        sourceNotice={s.source ? getSourceNoticeFromAvailability(sourceAvailability[s.source] ?? { status: "healthy" }) : null}
                       />
                     ))}
                   </div>

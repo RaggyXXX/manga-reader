@@ -17,6 +17,8 @@ import {
 import { getLastReadChapter, getReadChapters } from "@/lib/reading-progress";
 import { imageProxyUrl } from "@/lib/scraper";
 import { checkForUpdates } from "@/lib/update-checker";
+import { getSourceNoticeFromAvailability } from "@/lib/source-health";
+import { useSourceAvailabilityMap } from "@/lib/use-source-availability";
 import { ChapterList } from "@/components/ChapterList";
 import { StatusSelector } from "@/components/StatusSelector";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
@@ -30,6 +32,7 @@ export default function SeriesPage() {
   const slug = params.slug as string;
   const { phase, slug: syncSlug, startSync, stopSync, completed, total, clearUpdateFlag } = useSyncContext();
   const isSyncing = phase !== "idle" && syncSlug === slug;
+  const sourceAvailability = useSourceAvailabilityMap();
 
   const [series, setSeries] = useState<StoredSeries | null>(null);
   const [chapters, setChapters] = useState<StoredChapter[]>([]);
@@ -97,6 +100,7 @@ export default function SeriesPage() {
   }
 
   const favorite = !!series.isFavorite;
+  const sourceNotice = series.source ? getSourceNoticeFromAvailability(sourceAvailability[series.source] ?? { status: "healthy" }) : null;
   const status = series.readingStatus;
   const syncedCount = chapters.filter((ch) => ch.imageUrls.length > 0).length;
   const chapterNumbers = chapters.map((ch) => ch.number).sort((a, b) => a - b);
@@ -143,6 +147,7 @@ export default function SeriesPage() {
   };
 
   const handleSyncClick = () => {
+    if (sourceNotice) return;
     if (isSyncing) {
       stopSync();
     } else {
@@ -153,6 +158,15 @@ export default function SeriesPage() {
 
   // Determine bottom button state
   const getButtonState = () => {
+    if (sourceNotice) {
+      return {
+        label: sourceNotice.tone === "muted" ? "Updates retired" : "Updates unavailable",
+        icon: <CloudDownload className="mr-2 h-5 w-5" />,
+        suffix: null,
+        disabled: true,
+        enabled: false,
+      };
+    }
     if (isSyncing) {
       const progress = total > 0 ? `${completed}/${total}` : "...";
       return { label: `Syncing... ${progress}`, icon: <Loader2 className="mr-2 h-5 w-5 animate-spin" />, suffix: <span className="ml-2 text-xs opacity-80">Tap to stop</span>, disabled: false, enabled: true };
@@ -173,6 +187,13 @@ export default function SeriesPage() {
       <div className="flex items-center justify-end">
         <DeleteSeriesButton seriesSlug={slug} seriesTitle={series.title} />
       </div>
+
+      {sourceNotice ? (
+        <div className={`rounded-xl border px-4 py-3 text-sm ${sourceNotice.tone === "warning" ? "border-amber-200 bg-amber-50 text-amber-950" : "border-slate-200 bg-slate-50 text-slate-800"}`}>
+          <p className="font-medium">{sourceNotice.title}</p>
+          <p className="mt-1 text-sm/6">{sourceNotice.message}</p>
+        </div>
+      ) : null}
 
       <Card className="overflow-hidden">
         <CardContent className="p-0 sm:p-0">

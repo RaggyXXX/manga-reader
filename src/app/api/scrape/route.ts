@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { inferSourceFromUrl, recordSourceFailure, recordSourceSuccess } from "@/lib/source-health";
 import { fetchWithH2 } from "@/lib/server/fetch-h2";
 
 // Node.js runtime (not edge) — uses got + http2-wrapper for TLS fingerprint bypass
@@ -30,6 +31,7 @@ export async function GET(req: NextRequest) {
   }
 
   let parsed: URL;
+  const sourceName = inferSourceFromUrl(url);
   try {
     parsed = new URL(url);
   } catch {
@@ -53,6 +55,7 @@ export async function GET(req: NextRequest) {
         head.includes("cf-challenge") ||
         head.includes("<title>Attention Required")
       ) {
+        if (sourceName) await recordSourceFailure(sourceName, "Cloudflare challenge page returned", Date.now(), "strong");
         return NextResponse.json(
           { error: "Cloudflare challenge page returned" },
           { status: 502 }
@@ -60,6 +63,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    if (sourceName) await recordSourceSuccess(sourceName);
     return new NextResponse(body, {
       headers: {
         "Content-Type": contentType,
@@ -72,6 +76,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    if (sourceName) await recordSourceFailure(sourceName, message, Date.now(), "strong");
     const isTimeout = message.includes("Timeout");
     return NextResponse.json(
       { error: isTimeout ? "Upstream timeout" : message },

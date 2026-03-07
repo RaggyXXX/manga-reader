@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowDownAZ, ArrowUpZA, ChevronDown, Filter, Loader2, Search, Sparkles, X } from "lucide-react";
 import { discoverSeries, imageProxyUrl } from "@/lib/scraper";
 import { getAllSeries, saveSeries, type MangaSource } from "@/lib/manga-store";
+import { listSearchableSources, type SourceAvailabilityStatus } from "@/lib/source-health";
 import { SearchResultCard } from "@/components/SearchResultCard";
 import { FeaturedMangaCard } from "@/components/FeaturedMangaCard";
 import { PreviewModal } from "@/components/PreviewModal";
@@ -22,7 +23,7 @@ interface SearchResult {
 
 type SortMode = "relevance" | "a-z" | "z-a" | "chapters-desc" | "chapters-asc";
 
-const SOURCE_FILTERS: { key: MangaSource | "all"; label: string; color: string }[] = [
+const ALL_SOURCE_FILTERS: { key: MangaSource | "all"; label: string; color: string }[] = [
   { key: "all", label: "All sources", color: "#b57f44" },
   { key: "mangadex", label: "MangaDex", color: "#ff6740" },
   { key: "mangakatana", label: "MangaKatana", color: "#4a90d9" },
@@ -55,6 +56,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   const [addingUrl, setAddingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<MangaSource | "all">("all");
+  const [searchableSources, setSearchableSources] = useState<MangaSource[]>(() => listSearchableSources());
   const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [preview, setPreview] = useState<SearchResult | null>(null);
@@ -128,6 +130,33 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   useEffect(() => {
     let cancelled = false;
 
+    async function loadSourceHealth() {
+      try {
+        const response = await fetch("/api/source-health");
+        if (!response.ok) throw new Error(`Source health failed: ${response.status}`);
+        const data = await response.json() as { sources?: Record<MangaSource, { status?: SourceAvailabilityStatus }> };
+        if (cancelled) return;
+        const nextSearchable = ALL_SOURCE_FILTERS
+          .map((item) => item.key)
+          .filter((key): key is MangaSource => key !== "all")
+          .filter((source) => data.sources?.[source]?.status === "healthy");
+        setSearchableSources(nextSearchable.length > 0 ? nextSearchable : listSearchableSources());
+      } catch {
+        if (!cancelled) {
+          setSearchableSources(listSearchableSources());
+        }
+      }
+    }
+
+    loadSourceHealth();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
     async function loadFeatured() {
       setFeaturedLoading(true);
       setFeaturedError(null);
@@ -172,6 +201,14 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
       return () => document.removeEventListener("mousedown", handleClick);
     }
   }, [sourceDropdownOpen, sortDropdownOpen]);
+
+  const sourceFilters = useMemo(() => ALL_SOURCE_FILTERS.filter((filterOption) => filterOption.key === "all" || searchableSources.includes(filterOption.key)), [searchableSources]);
+
+  useEffect(() => {
+    if (sourceFilter !== "all" && !searchableSources.includes(sourceFilter)) {
+      setSourceFilter("all");
+    }
+  }, [searchableSources, sourceFilter]);
 
   const filtered = useMemo(() => {
     let list = sourceFilter === "all" ? results : results.filter((r) => r.source === sourceFilter);
@@ -300,14 +337,14 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
             className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
           >
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full" style={{ background: SOURCE_FILTERS.find((sf) => sf.key === sourceFilter)?.color }} />
-              {SOURCE_FILTERS.find((sf) => sf.key === sourceFilter)?.label}
+              <span className="h-2 w-2 rounded-full" style={{ background: sourceFilters.find((sf) => sf.key === sourceFilter)?.color }} />
+              {sourceFilters.find((sf) => sf.key === sourceFilter)?.label}
             </span>
             <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${sourceDropdownOpen ? "rotate-180" : ""}`} />
           </button>
           {sourceDropdownOpen && (
             <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg">
-              {SOURCE_FILTERS.map((sf) => (
+              {sourceFilters.map((sf) => (
                 <button
                   key={sf.key}
                   type="button"

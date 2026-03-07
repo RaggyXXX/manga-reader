@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { inferSourceFromUrl, recordSourceFailure, recordSourceSuccess } from "@/lib/source-health";
 
 // Edge runtime: 30s timeout on Netlify (vs 10s for regular functions)
 export const runtime = "edge";
@@ -70,16 +71,6 @@ async function tryAlloriginsRaw(url: string, mirror: string): Promise<string> {
   const html = await resp.text();
   const rawLen = html?.length || 0;
   if (!isValidHtml(html)) throw new Error(`invalid HTML (${rawLen}b)`);
-  return html;
-}
-
-/** Try a transparent CORS proxy (corsfix, CF CORS Anywhere, etc.) */
-async function tryCorsProxy(url: string, proxyUrl: string): Promise<string> {
-  const resp = await fetchWithTimeout(proxyUrl);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const html = await resp.text();
-  const len = html?.length || 0;
-  if (!isValidHtml(html)) throw new Error(`invalid HTML (${len}b)`);
   return html;
 }
 
@@ -170,6 +161,7 @@ export async function GET(req: NextRequest) {
   }
 
   let parsed: URL;
+  const sourceName = inferSourceFromUrl(url);
   try {
     parsed = new URL(url);
   } catch {
@@ -187,6 +179,7 @@ export async function GET(req: NextRequest) {
       const { html, diagnostics } = await fetchHtmlWithRetry(url);
 
       if (html) {
+        if (sourceName) await recordSourceSuccess(sourceName);
         if (debug) {
           return NextResponse.json({ ok: true, size: html.length, diagnostics });
         }
@@ -200,6 +193,7 @@ export async function GET(req: NextRequest) {
         });
       }
 
+      if (sourceName) await recordSourceFailure(sourceName, "All proxy services failed after retries", Date.now(), "strong");
       return NextResponse.json(
         { error: "All proxy services failed after retries", diagnostics },
         { status: 502 }
@@ -217,11 +211,13 @@ export async function GET(req: NextRequest) {
     });
 
     if (!resp.ok) {
+      if (sourceName) await recordSourceFailure(sourceName, `Upstream ${resp.status}`, Date.now(), "strong");
       return NextResponse.json({ error: `Upstream ${resp.status}` }, { status: resp.status });
     }
 
     const contentType = resp.headers.get("content-type") || "application/octet-stream";
 
+    if (sourceName) await recordSourceSuccess(sourceName);
     return new NextResponse(resp.body, {
       headers: {
         "Content-Type": contentType,
@@ -231,6 +227,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    if (sourceName) await recordSourceFailure(sourceName, message, Date.now(), "strong");
     const isTimeout = message.includes("abort");
     return NextResponse.json(
       { error: isTimeout ? "Upstream timeout" : "Fetch failed" },

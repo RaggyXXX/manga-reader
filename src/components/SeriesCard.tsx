@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { StatusBadge } from "@/components/StatusSelector";
 import { getReadChapters } from "@/lib/reading-progress";
 import { imageProxyUrl } from "@/lib/scraper";
 import type { MangaSource, ReadingStatus } from "@/lib/manga-store";
+import type { SourceNotice } from "@/lib/source-health";
 import { motionOrInstant } from "@/lib/motion";
 
 interface SeriesCardProps {
@@ -26,6 +28,7 @@ interface SeriesCardProps {
   onLongPress?: (slug: string) => void;
   updateCount?: number;
   variant?: "grid" | "list";
+  sourceNotice?: SourceNotice | null;
 }
 
 export function SeriesCard({
@@ -43,6 +46,7 @@ export function SeriesCard({
   onLongPress,
   updateCount,
   variant = "grid",
+  sourceNotice,
 }: SeriesCardProps) {
   const reduced = useReducedMotion();
   const router = useRouter();
@@ -51,18 +55,24 @@ export function SeriesCard({
   const unreadCount = totalChapters > 0 ? totalChapters - readCount : 0;
 
   // Long-press handling
-  const longPressRef = { timer: null as ReturnType<typeof setTimeout> | null, moved: false };
+  const longPressRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; moved: boolean }>({
+    timer: null,
+    moved: false,
+  });
 
   const handlePointerDown = () => {
     if (!onLongPress) return;
-    longPressRef.moved = false;
-    longPressRef.timer = setTimeout(() => {
-      if (!longPressRef.moved) onLongPress(slug);
+    longPressRef.current.moved = false;
+    longPressRef.current.timer = setTimeout(() => {
+      if (!longPressRef.current.moved) onLongPress(slug);
     }, 500);
   };
-  const handlePointerMove = () => { longPressRef.moved = true; };
+  const handlePointerMove = () => { longPressRef.current.moved = true; };
   const handlePointerUp = () => {
-    if (longPressRef.timer) clearTimeout(longPressRef.timer);
+    if (longPressRef.current.timer) {
+      clearTimeout(longPressRef.current.timer);
+      longPressRef.current.timer = null;
+    }
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -92,6 +102,7 @@ export function SeriesCard({
       {/* Cover thumbnail */}
       <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-muted/40">
         {coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageProxyUrl(coverUrl, source)}
             alt={title}
@@ -112,6 +123,11 @@ export function SeriesCard({
           <h3 className="truncate text-sm font-semibold text-foreground">{title}</h3>
           {readingStatus && <StatusBadge status={readingStatus} />}
         </div>
+        {sourceNotice ? (
+          <span className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${sourceNotice.tone === "warning" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700"}`}>
+            {sourceNotice.title}
+          </span>
+        ) : null}
         <div className="flex items-center gap-2">
           <Badge variant={readCount > 0 ? "default" : "muted"} className="text-[10px]">
             {readCount > 0 ? `${readCount} / ${totalChapters} Ch.` : `${totalChapters} Ch.`}
@@ -156,6 +172,7 @@ export function SeriesCard({
     <>
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted/40">
         {coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageProxyUrl(coverUrl, source)}
             alt={title}
@@ -216,6 +233,12 @@ export function SeriesCard({
             <StatusBadge status={readingStatus} />
           </div>
         )}
+
+        {sourceNotice ? (
+          <span className={`absolute left-2 top-8 inline-flex max-w-[70%] rounded-full px-2 py-0.5 text-[10px] font-medium shadow ${sourceNotice.tone === "warning" ? "bg-amber-100/95 text-amber-900" : "bg-slate-100/95 text-slate-800"}`}>
+            {sourceNotice.title}
+          </span>
+        ) : null}
 
         {/* Update available badge - bottom right above title gradient */}
         {updateCount != null && updateCount > 0 && (
