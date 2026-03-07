@@ -56,7 +56,28 @@ interface ProxyEndpoint {
   json?: boolean;
 }
 
+// Sources with Access-Control-Allow-Origin: * — can be fetched directly from browser
+const CORS_OPEN_HOSTS = ["mangabuddy.com", "www.mangabuddy.com"];
+
+function isCorsOpen(url: string): boolean {
+  try {
+    return CORS_OPEN_HOSTS.includes(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
 async function fetchHtml(url: string): Promise<Document> {
+  // Direct fetch for CORS-open sources (no server needed)
+  if (isCorsOpen(url)) {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`Direct fetch failed: ${resp.status}`);
+    const text = await resp.text();
+    validateHtmlText(text);
+    return new DOMParser().parseFromString(text, "text/html");
+  }
+
+  // Server proxy for CORS-restricted sources
   const endpoints: ProxyEndpoint[] = [];
   if (CF_PROXY_URL) {
     endpoints.push({ url: CF_PROXY_URL + "?url=" + encodeURIComponent(url) });

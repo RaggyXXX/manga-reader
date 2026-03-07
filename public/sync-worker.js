@@ -38,7 +38,28 @@ async function fetchWithTimeout(url, timeoutMs) {
   }
 }
 
+// Sources with Access-Control-Allow-Origin: * — fetch directly from browser
+var CORS_OPEN_HOSTS = ["mangabuddy.com", "www.mangabuddy.com"];
+
+function isCorsOpen(url) {
+  try {
+    return CORS_OPEN_HOSTS.indexOf(new URL(url).hostname) !== -1;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function fetchHtmlText(url, origin) {
+  // Direct fetch for CORS-open sources (no server needed)
+  if (isCorsOpen(url)) {
+    var resp = await fetchWithTimeout(url, 12000);
+    if (!resp.ok) throw new Error("Direct fetch failed: " + resp.status);
+    var text = await resp.text();
+    validateHtmlText(text);
+    return text;
+  }
+
+  // Server proxy for CORS-restricted sources
   var endpoints = [];
   if (cfProxyUrl) {
     endpoints.push({ url: cfProxyUrl + "?url=" + encodeURIComponent(url), json: false });
