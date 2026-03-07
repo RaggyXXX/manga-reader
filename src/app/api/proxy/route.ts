@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { inferSourceFromUrl, recordSourceFailure, recordSourceSuccess } from "@/lib/source-health";
 
-// Edge runtime: 30s timeout on Netlify (vs 10s for regular functions)
-export const runtime = "edge";
+// Node runtime keeps this route compatible with source-health persistence and upstream retry logic.
+export const runtime = "nodejs";
 
 const ALLOWED_HOSTS = ["manhwazone.to", "www.manhwazone.to", "c2.manhwatop.com", "c4.manhwatop.com", "media.manhwazone.to", "official.lowee.us", "hot.planeptune.us", "mangakatana.com", "www.mangakatana.com", "i1.mangakatana.com", "i2.mangakatana.com", "i3.mangakatana.com", "weebcentral.com", "www.weebcentral.com", "temp.compsci88.com", "mangabuddy.com", "www.mangabuddy.com", "res.mbbcdn.com", "atsu.moe"];
 

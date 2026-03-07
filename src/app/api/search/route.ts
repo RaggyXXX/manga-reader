@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithH2, postWithH2 } from "@/lib/server/fetch-h2";
 import { collectSearchResults, type SearchResult } from "@/lib/search-aggregation";
+import { mapMangaDexCardResult } from "@/lib/mangadex-card-result";
 import { syncSourceHealthFromStore } from "@/lib/source-health";
 import { recheckDueSources } from "@/lib/server/source-health-recheck";
 
@@ -14,36 +15,7 @@ async function searchMangaDex(q: string): Promise<SearchResult[]> {
   if (!resp.ok) throw new Error(`MangaDex API ${resp.status}`);
   const data = await resp.json();
 
-  return (data.data || []).map((manga: Record<string, unknown>) => {
-    const id = manga.id as string;
-    const attrs = manga.attributes as Record<string, unknown>;
-    const titleObj = attrs.title as Record<string, string>;
-    const title = titleObj?.en || titleObj?.ja || titleObj?.["ja-ro"] || Object.values(titleObj || {})[0] || "Unknown";
-
-    let coverFileName = "";
-    const rels = manga.relationships as Array<Record<string, unknown>>;
-    for (const rel of rels || []) {
-      if (rel.type === "cover_art") {
-        const relAttrs = rel.attributes as Record<string, string> | undefined;
-        coverFileName = relAttrs?.fileName || "";
-        break;
-      }
-    }
-    const coverUrl = coverFileName
-      ? `https://uploads.mangadex.org/covers/${id}/${coverFileName}.256.jpg`
-      : "";
-
-    const lastCh = attrs.lastChapter as string | undefined;
-    return {
-      title,
-      coverUrl,
-      sourceUrl: `https://mangadex.org/title/${id}`,
-      source: "mangadex" as const,
-      sourceId: id,
-      availableLanguages: (attrs.availableTranslatedLanguages as string[]) || [],
-      chapterCount: lastCh ? parseInt(lastCh, 10) || undefined : undefined,
-    };
-  });
+  return (data.data || []).map((manga: Record<string, unknown>) => mapMangaDexCardResult(manga as never));
 }
 
 // ── MangaKatana ──
