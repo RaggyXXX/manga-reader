@@ -45,3 +45,7 @@ next-env.d.ts
 
 # local git worktrees
 .worktrees/
+
+# Capacitor native builds
+android/app/build/
+ios/App/Pods/

@@ -23,6 +23,8 @@ import {
   initUpdateFlagStore,
   setUpdateFlag,
 } from "@/lib/update-flag-store";
+import { isNative } from "@/lib/platform";
+import { registerBackgroundSync } from "@/lib/background-sync";
 
 export type SyncPhase = "idle" | "discovering" | "scraping" | "error";
 
@@ -149,6 +151,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           preferredLanguage: s.preferredLanguage || "en",
         })),
         origin: window.location.origin,
+        nativeMode: isNative(),
       });
     })();
   }, []); // Run once on mount
@@ -185,6 +188,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         totalKnown: allChapters.length,
         origin: window.location.origin,
         cfProxyUrl: CF_PROXY_URL,
+        nativeMode: isNative(),
       });
       setState({
         phase: "scraping",
@@ -344,6 +348,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           lastChapterUrl: null,
           origin: window.location.origin,
           cfProxyUrl: CF_PROXY_URL,
+          nativeMode: isNative(),
         });
       } else {
         // Has chapters — check for new ones + scrape any unsynced
@@ -375,6 +380,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           lastChapterUrl: lastChapter.url,
           origin: window.location.origin,
           cfProxyUrl: CF_PROXY_URL,
+          nativeMode: isNative(),
         });
       }
       })();
@@ -386,6 +392,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     workerRef.current?.postMessage({ type: "stop" });
     setState(IDLE_STATE);
     slugRef.current = null;
+  }, []);
+
+  // Register background sync for native apps
+  useEffect(() => {
+    void registerBackgroundSync();
   }, []);
 
   return (

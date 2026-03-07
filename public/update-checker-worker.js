@@ -1,15 +1,18 @@
 /**
  * Lightweight background Web Worker that checks each series for new chapters.
- * Input:  { type: "check", series: [...], origin }
+ * Input:  { type: "check", series: [...], origin, nativeMode }
  * Output: { type: "result", slug, newCount } per series
  *         { type: "done" }
  */
+
+var _nativeMode = false;
 
 self.onmessage = async function (e) {
   const msg = e.data;
   if (msg.type !== "check") return;
 
   const { series, origin } = msg;
+  _nativeMode = msg.nativeMode || false;
 
   for (const s of series) {
     try {
@@ -49,18 +52,35 @@ async function countAtsumaruChapters(s) {
 async function countMangaDexChapters(s, origin) {
   if (!s.sourceId) return 0;
   const lang = s.preferredLanguage || "en";
-  const res = await fetch(
-    `${origin}/api/mangadex/chapters?mangaId=${s.sourceId}&lang=${lang}`
+
+  if (_nativeMode) {
+    // Direct MangaDex API — no CORS in native
+    var res = await fetch(
+      "https://api.mangadex.org/manga/" + s.sourceId + "/feed?translatedLanguage[]=" + encodeURIComponent(lang) + "&limit=1&offset=0"
+    );
+    if (!res.ok) return 0;
+    var data = await res.json();
+    return data.total || 0;
+  }
+
+  var res2 = await fetch(
+    origin + "/api/mangadex/chapters?mangaId=" + s.sourceId + "&lang=" + lang
   );
-  if (!res.ok) return 0;
-  const data = await res.json();
-  return Array.isArray(data.chapters) ? data.chapters.length : 0;
+  if (!res2.ok) return 0;
+  var data2 = await res2.json();
+  return Array.isArray(data2.chapters) ? data2.chapters.length : 0;
 }
 
 async function countScrapedChapters(sourceUrl, source, origin) {
-  const res = await fetch(
-    `${origin}/api/scrape?url=${encodeURIComponent(sourceUrl)}`
-  );
+  var fetchUrl;
+  if (_nativeMode) {
+    // Native: fetch directly from source (no CORS)
+    fetchUrl = sourceUrl;
+  } else {
+    fetchUrl = origin + "/api/scrape?url=" + encodeURIComponent(sourceUrl);
+  }
+
+  const res = await fetch(fetchUrl);
   if (!res.ok) return 0;
   const html = await res.text();
 

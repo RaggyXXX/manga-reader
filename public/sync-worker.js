@@ -5,6 +5,7 @@ const REQUEST_DELAY = 500;
 
 let cancelled = false;
 let cfProxyUrl = ""; // Set from start message
+let nativeMode = false; // Set from start message — direct fetch, no proxy needed
 
 // ── Helpers ──
 
@@ -50,8 +51,8 @@ function isCorsOpen(url) {
 }
 
 async function fetchHtmlText(url, origin) {
-  // Direct fetch for CORS-open sources (no server needed)
-  if (isCorsOpen(url)) {
+  // Native app or CORS-open: fetch directly — no proxy needed
+  if (nativeMode || isCorsOpen(url)) {
     var resp = await fetchWithTimeout(url, 12000);
     if (!resp.ok) throw new Error("Direct fetch failed: " + resp.status);
     var text = await resp.text();
@@ -59,7 +60,7 @@ async function fetchHtmlText(url, origin) {
     return text;
   }
 
-  // Server proxy for CORS-restricted sources
+  // Web/PWA: server proxy chain
   var endpoints = [];
   if (cfProxyUrl) {
     endpoints.push({ url: cfProxyUrl + "?url=" + encodeURIComponent(url), json: false });
@@ -378,10 +379,48 @@ async function syncManhwazone(msg) {
   }
 }
 
+// ── MangaDex helpers (native direct API) ──
+
+async function fetchMangadexChapters(sourceId, lang) {
+  if (nativeMode) {
+    // Direct MangaDex API — no CORS in native
+    var allChapters = [];
+    var offset = 0;
+    var limit = 500;
+    while (true) {
+      var data = await fetchJson(
+        "https://api.mangadex.org/manga/" + sourceId + "/feed?translatedLanguage[]=" + encodeURIComponent(lang) +
+        "&limit=" + limit + "&offset=" + offset + "&order[chapter]=asc"
+      );
+      var batch = (data.data || []).map(function(ch) {
+        return { id: ch.id, chapter: ch.attributes.chapter, title: ch.attributes.title };
+      });
+      allChapters = allChapters.concat(batch);
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+    return { chapters: allChapters };
+  }
+  return fetchJson(self._origin + "/api/mangadex/chapters?mangaId=" + sourceId + "&lang=" + encodeURIComponent(lang));
+}
+
+async function fetchMangadexImages(chapterId) {
+  if (nativeMode) {
+    // Direct MangaDex at-home API
+    var atHome = await fetchJson("https://api.mangadex.org/at-home/server/" + chapterId);
+    var baseUrl = atHome.baseUrl;
+    var chapter = atHome.chapter;
+    return (chapter.data || []).map(function(f) { return baseUrl + "/data/" + chapter.hash + "/" + f; });
+  }
+  var imgData = await fetchJson(self._origin + "/api/mangadex/images?chapterId=" + chapterId);
+  return imgData.imageUrls || [];
+}
+
 // ── MangaDex Sync ──
 
 async function syncMangadex(msg) {
   const { slug, sourceId, origin } = msg;
+  self._origin = origin; // Store for helper functions
   const lang = msg.preferredLanguage || "en";
   const unsyncedChapters = msg.unsyncedChapters || [];
   let alreadySyncedCount = msg.alreadySyncedCount || 0;
@@ -392,7 +431,7 @@ async function syncMangadex(msg) {
     if (totalKnown === 0 && sourceId) {
       self.postMessage({ type: "checking_new" });
 
-      const chaptersData = await fetchJson(origin + "/api/mangadex/chapters?mangaId=" + sourceId + "&lang=" + encodeURIComponent(lang));
+      const chaptersData = await fetchMangadexChapters(sourceId, lang);
       const chapters = chaptersData.chapters || [];
 
       for (let i = 0; i < chapters.length; i++) {
@@ -419,7 +458,7 @@ async function syncMangadex(msg) {
     if (sourceId && !cancelled) {
       self.postMessage({ type: "checking_new" });
 
-      const chaptersData = await fetchJson(origin + "/api/mangadex/chapters?mangaId=" + sourceId + "&lang=" + encodeURIComponent(lang));
+      const chaptersData = await fetchMangadexChapters(sourceId, lang);
       const apiChapters = chaptersData.chapters || [];
 
       // Find chapters we don't have yet
@@ -468,8 +507,7 @@ async function syncMangadex(msg) {
       const chapterId = ch.url.replace("mangadex:", "");
 
       try {
-        const imgData = await fetchJson(origin + "/api/mangadex/images?chapterId=" + chapterId);
-        const imageUrls = imgData.imageUrls || [];
+        const imageUrls = await fetchMangadexImages(chapterId);
         completed++;
 
         self.postMessage({
@@ -1013,6 +1051,7 @@ self.onmessage = async function (e) {
   if (msg.type === "start") {
     cancelled = false;
     cfProxyUrl = msg.cfProxyUrl || "";
+    nativeMode = msg.nativeMode || false;
 
     const source = msg.source || "manhwazone";
 

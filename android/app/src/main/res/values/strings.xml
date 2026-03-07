@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MangaBlast</string>
+    <string name="title_activity_main">MangaBlast</string>
+    <string name="package_name">com.mangablast.app</string>
+    <string name="custom_url_scheme">com.mangablast.app</string>
+</resources>

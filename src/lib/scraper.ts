@@ -1,4 +1,5 @@
 import type { MangaSource } from "./manga-store";
+import { isNative } from "./platform";
 
 const IMAGE_PROXY_BASE = "/api/proxy?url=";
 const REQUEST_DELAY = 500;
@@ -9,13 +10,21 @@ const CF_PROXY_URL = process.env.NEXT_PUBLIC_CF_PROXY_URL || "";
 // --- Image proxy URL ---
 
 export function imageProxyUrl(url: string, source?: MangaSource): string {
+  // Native app: load all images directly (no CORS)
+  if (isNative()) {
+    if (source === "atsumaru" && url.startsWith("/")) {
+      return `https://atsu.moe${url}`;
+    }
+    return url;
+  }
+
+  // Web/PWA: proxy MangaDex images, others load directly
   if (source === "mangadex") {
     return `/api/mangadex/img?url=${encodeURIComponent(url)}`;
   }
   if (source === "atsumaru" && url.startsWith("/")) {
     return `https://atsu.moe${url}`;
   }
-  // Other sources: browser loads directly (real TLS fingerprint passes CF)
   return url;
 }
 
@@ -68,16 +77,22 @@ function isCorsOpen(url: string): boolean {
 }
 
 async function fetchHtml(url: string): Promise<Document> {
-  // Direct fetch for CORS-open sources (no server needed)
-  if (isCorsOpen(url)) {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Direct fetch failed: ${resp.status}`);
+  // Native app: fetch directly — Capacitor patches fetch() to bypass CORS
+  if (isNative() || isCorsOpen(url)) {
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
     const text = await resp.text();
     validateHtmlText(text);
     return new DOMParser().parseFromString(text, "text/html");
   }
 
-  // Server proxy for CORS-restricted sources
+  // Web/PWA: use server proxy chain (CORS restricted)
   const endpoints: ProxyEndpoint[] = [];
   if (CF_PROXY_URL) {
     endpoints.push({ url: CF_PROXY_URL + "?url=" + encodeURIComponent(url) });
