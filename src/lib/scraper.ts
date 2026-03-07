@@ -62,8 +62,6 @@ async function fetchHtml(url: string): Promise<Document> {
     endpoints.push({ url: CF_PROXY_URL + "?url=" + encodeURIComponent(url) });
   }
   endpoints.push({ url: "/api/scrape?url=" + encodeURIComponent(url) });
-  endpoints.push({ url: "https://proxy.corsfix.com/?" + url });
-  endpoints.push({ url: "https://every-origin.vercel.app/get?url=" + encodeURIComponent(url), json: true });
   endpoints.push({ url: IMAGE_PROXY_BASE + encodeURIComponent(url) });
 
   let lastError: Error | null = null;

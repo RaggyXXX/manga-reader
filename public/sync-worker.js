@@ -40,12 +40,10 @@ async function fetchWithTimeout(url, timeoutMs) {
 
 async function fetchHtmlText(url, origin) {
   var endpoints = [];
-  endpoints.push({ url: origin + "/api/scrape?url=" + encodeURIComponent(url), json: false });
   if (cfProxyUrl) {
     endpoints.push({ url: cfProxyUrl + "?url=" + encodeURIComponent(url), json: false });
   }
-  endpoints.push({ url: "https://proxy.corsfix.com/?" + url, json: false });
-  endpoints.push({ url: "https://every-origin.vercel.app/get?url=" + encodeURIComponent(url), json: true });
+  endpoints.push({ url: origin + "/api/scrape?url=" + encodeURIComponent(url), json: false });
   endpoints.push({ url: origin + "/api/proxy?url=" + encodeURIComponent(url), json: false });
 
   var lastError = null;
