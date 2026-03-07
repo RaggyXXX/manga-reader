@@ -1,4 +1,6 @@
-const BOOKMARKS_KEY = "manga-bookmarks";
+"use client";
+
+import { dbStores, deleteRecord, ensureLegacyDataMigrated, getAllFromStore, putRecord, queueMicrotaskSafe } from "./db";
 
 export interface Bookmark {
   id: string;
@@ -11,41 +13,65 @@ export interface Bookmark {
 
 type AllBookmarks = Record<string, Bookmark[]>;
 
-function loadAll(): AllBookmarks {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(BOOKMARKS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+let bookmarksCache: AllBookmarks = {};
+let ready = false;
+let initPromise: Promise<void> | null = null;
+let writeQueue: Promise<void> = Promise.resolve();
+
+function enqueueWrite(operation: () => Promise<void>) {
+  writeQueue = writeQueue.then(operation).catch(() => {});
 }
 
-function saveAll(data: AllBookmarks) {
+function emitStorageUpdate() {
   if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(data));
-  } catch {
-    // localStorage full or unavailable
+  queueMicrotaskSafe(() => {
+    window.dispatchEvent(new Event("storage-updated"));
+  });
+}
+
+export async function initBookmarkStore(): Promise<void> {
+  if (ready) return;
+  if (!initPromise) {
+    initPromise = (async () => {
+      await ensureLegacyDataMigrated();
+      const records = await getAllFromStore<Bookmark>(dbStores.bookmarks);
+      const grouped: AllBookmarks = {};
+      for (const bookmark of records) {
+        if (!grouped[bookmark.slug]) grouped[bookmark.slug] = [];
+        grouped[bookmark.slug].push(bookmark);
+      }
+      for (const slug of Object.keys(grouped)) {
+        grouped[slug].sort((a, b) => b.createdAt - a.createdAt);
+      }
+      bookmarksCache = grouped;
+      ready = true;
+    })();
   }
+
+  await initPromise;
+}
+
+export function __resetBookmarkStoreForTests() {
+  bookmarksCache = {};
+  ready = false;
+  initPromise = null;
+  writeQueue = Promise.resolve();
 }
 
 export function getBookmarks(slug: string): Bookmark[] {
-  const all = loadAll();
-  return all[slug] ?? [];
+  return [...(bookmarksCache[slug] ?? [])];
 }
 
 export function getAllBookmarks(): AllBookmarks {
-  return loadAll();
+  return Object.fromEntries(Object.entries(bookmarksCache).map(([slug, bookmarks]) => [slug, [...bookmarks]]));
 }
 
 export function addBookmark(
   slug: string,
   chapterNumber: number,
   imageIndex: number,
-  note?: string
+  note?: string,
 ): Bookmark {
-  const all = loadAll();
   const bookmark: Bookmark = {
     id: crypto.randomUUID(),
     slug,
@@ -54,39 +80,29 @@ export function addBookmark(
     note,
     createdAt: Date.now(),
   };
-  if (!all[slug]) {
-    all[slug] = [];
-  }
-  all[slug].push(bookmark);
-  saveAll(all);
+  if (!bookmarksCache[slug]) bookmarksCache[slug] = [];
+  bookmarksCache[slug].push(bookmark);
+  bookmarksCache[slug].sort((a, b) => b.createdAt - a.createdAt);
+  enqueueWrite(() => putRecord(dbStores.bookmarks, bookmark));
+  emitStorageUpdate();
   return bookmark;
 }
 
 export function removeBookmark(slug: string, id: string) {
-  const all = loadAll();
-  if (!all[slug]) return;
-  all[slug] = all[slug].filter((b) => b.id !== id);
-  if (all[slug].length === 0) {
-    delete all[slug];
-  }
-  saveAll(all);
+  const current = bookmarksCache[slug];
+  if (!current) return;
+  bookmarksCache[slug] = current.filter((bookmark) => bookmark.id !== id);
+  if (bookmarksCache[slug].length === 0) delete bookmarksCache[slug];
+  enqueueWrite(() => deleteRecord(dbStores.bookmarks, id));
+  emitStorageUpdate();
 }
 
-export function getChapterBookmarks(
-  slug: string,
-  chapterNumber: number
-): Bookmark[] {
-  const bookmarks = getBookmarks(slug);
-  return bookmarks.filter((b) => b.chapterNumber === chapterNumber);
+export function getChapterBookmarks(slug: string, chapterNumber: number): Bookmark[] {
+  return getBookmarks(slug).filter((bookmark) => bookmark.chapterNumber === chapterNumber);
 }
 
-export function hasBookmark(
-  slug: string,
-  chapterNumber: number,
-  imageIndex: number
-): boolean {
-  const bookmarks = getBookmarks(slug);
-  return bookmarks.some(
-    (b) => b.chapterNumber === chapterNumber && b.imageIndex === imageIndex
+export function hasBookmark(slug: string, chapterNumber: number, imageIndex: number): boolean {
+  return getBookmarks(slug).some(
+    (bookmark) => bookmark.chapterNumber === chapterNumber && bookmark.imageIndex === imageIndex,
   );
 }

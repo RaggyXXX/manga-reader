@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { BookOpenCheck, CloudDownload, Heart, Loader2, Play, Share2 } from "lucide-react";
@@ -30,20 +31,20 @@ export default function SeriesPage() {
   const { phase, slug: syncSlug, startSync, stopSync, completed, total, clearUpdateFlag } = useSyncContext();
   const isSyncing = phase !== "idle" && syncSlug === slug;
 
-  const [series, setSeries] = useState<StoredSeries | null>(() => getSeries(slug));
-  const [chapters, setChapters] = useState<StoredChapter[]>(() => getChapters(slug));
-  const [favorite, setFavorite] = useState(false);
-  const [status, setStatus] = useState<ReadingStatus | undefined>(undefined);
+  const [series, setSeries] = useState<StoredSeries | null>(null);
+  const [chapters, setChapters] = useState<StoredChapter[]>([]);
   const [copied, setCopied] = useState(false);
   const [newCount, setNewCount] = useState(0);
-  const [checking, setChecking] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   // Refresh chapter data during sync (without remounting cover)
   useEffect(() => {
     if (!isSyncing) return;
     const id = setInterval(() => {
-      setSeries(getSeries(slug));
-      setChapters(getChapters(slug));
+      void (async () => {
+        setSeries(await getSeries(slug));
+        setChapters(await getChapters(slug));
+      })();
     }, 2000);
     return () => clearInterval(id);
   }, [isSyncing, slug]);
@@ -51,25 +52,28 @@ export default function SeriesPage() {
   // Also refresh once when sync ends
   useEffect(() => {
     if (!isSyncing) {
-      setSeries(getSeries(slug));
-      setChapters(getChapters(slug));
+      void (async () => {
+        setSeries(await getSeries(slug));
+        setChapters(await getChapters(slug));
+      })();
     }
   }, [isSyncing, slug]);
 
-  // Initialize favorite/status from series data
   useEffect(() => {
-    if (series) {
-      setFavorite(!!series.isFavorite);
-      setStatus(series.readingStatus);
-    }
-  }, [series?.isFavorite, series?.readingStatus]);
+    void (async () => {
+      setSeries(await getSeries(slug));
+      setChapters(await getChapters(slug));
+    })();
+  }, [slug]);
 
   // Auto-check for updates on mount + clear update flag
   useEffect(() => {
     if (!series) return;
     clearUpdateFlag?.(slug);
     let cancelled = false;
-    setChecking(true);
+    queueMicrotask(() => {
+      if (!cancelled) setChecking(true);
+    });
     checkForUpdates(series).then((count) => {
       if (!cancelled) {
         setNewCount(count);
@@ -79,7 +83,7 @@ export default function SeriesPage() {
       if (!cancelled) setChecking(false);
     });
     return () => { cancelled = true; };
-  }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [series, slug, clearUpdateFlag]);
 
   if (!series) {
     return (
@@ -92,13 +96,14 @@ export default function SeriesPage() {
     );
   }
 
+  const favorite = !!series.isFavorite;
+  const status = series.readingStatus;
   const syncedCount = chapters.filter((ch) => ch.imageUrls.length > 0).length;
   const chapterNumbers = chapters.map((ch) => ch.number).sort((a, b) => a - b);
   const lastRead = getLastReadChapter(slug);
   const readSet = new Set(getReadChapters(slug));
   const nextUnread = chapterNumbers.find((n) => !readSet.has(n)) ?? null;
   const continueChapter = nextUnread ?? lastRead ?? (chapterNumbers[0] ?? null);
-  const isFullySynced = syncedCount > 0 && syncedCount >= chapters.length;
   const hasChaptersSynced = syncedCount > 0;
   const chaptersPlain = chapters.map((ch) => ({
     number: ch.number,
@@ -108,13 +113,17 @@ export default function SeriesPage() {
   }));
 
   const handleToggleFavorite = () => {
-    const newVal = toggleFavorite(slug);
-    setFavorite(newVal);
+    void (async () => {
+      const newVal = await toggleFavorite(slug);
+      setSeries((prev) => (prev ? { ...prev, isFavorite: newVal } : prev));
+    })();
   };
 
   const handleStatusChange = (newStatus: ReadingStatus | undefined) => {
-    updateReadingStatus(slug, newStatus);
-    setStatus(newStatus);
+    void (async () => {
+      await updateReadingStatus(slug, newStatus);
+      setSeries((prev) => (prev ? { ...prev, readingStatus: newStatus } : prev));
+    })();
   };
 
   const handleShare = async () => {
@@ -168,12 +177,15 @@ export default function SeriesPage() {
       <Card className="overflow-hidden">
         <CardContent className="p-0 sm:p-0">
           <div className="grid gap-4 p-4 sm:grid-cols-[180px_1fr]">
-            <div className="mx-auto max-h-[280px] w-auto overflow-hidden rounded-xl border border-border bg-muted/40 sm:max-h-none sm:w-full">
+            <div className="relative mx-auto max-h-[280px] w-auto overflow-hidden rounded-xl border border-border bg-muted/40 sm:max-h-none sm:w-full">
               {series.coverUrl ? (
-                <img
+                <Image
                   src={imageProxyUrl(series.coverUrl, series.source)}
                   alt={series.title}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="(max-width: 640px) 50vw, 180px"
+                  className="object-cover"
+                  unoptimized
                   referrerPolicy="no-referrer"
                 />
               ) : (

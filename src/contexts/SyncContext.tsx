@@ -17,12 +17,17 @@ import {
   updateSeriesTotalChapters,
   type StoredChapter,
 } from "@/lib/manga-store";
+import {
+  clearUpdateFlagValue,
+  getUpdateFlags,
+  initUpdateFlagStore,
+  setUpdateFlag,
+} from "@/lib/update-flag-store";
 
 export type SyncPhase = "idle" | "discovering" | "scraping" | "error";
 
 const CF_PROXY_URL = process.env.NEXT_PUBLIC_CF_PROXY_URL || "";
 
-const UPDATE_FLAGS_KEY = "manga-update-flags";
 const RECHECK_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours
 
 interface UpdateFlag {
@@ -59,23 +64,6 @@ const IDLE_STATE: SyncState = {
   error: null,
 };
 
-function loadUpdateFlags(): UpdateFlags {
-  try {
-    const raw = localStorage.getItem(UPDATE_FLAGS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveUpdateFlags(flags: UpdateFlags) {
-  try {
-    localStorage.setItem(UPDATE_FLAGS_KEY, JSON.stringify(flags));
-  } catch {
-    // ignore
-  }
-}
-
 export function useSyncContext(): SyncContextValue {
   const ctx = useContext(SyncContext);
   if (!ctx) throw new Error("useSyncContext must be used within SyncProvider");
@@ -89,9 +77,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SyncState>(IDLE_STATE);
   const [updateFlags, setUpdateFlags] = useState<UpdateFlags>({});
 
-  // Load update flags from localStorage on mount
   useEffect(() => {
-    setUpdateFlags(loadUpdateFlags());
+    void initUpdateFlagStore().then(() => {
+      setUpdateFlags(getUpdateFlags());
+    });
   }, []);
 
   // Keep slugRef in sync
@@ -109,72 +98,73 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   // Background update checker
   useEffect(() => {
-    const allSeries = getAllSeries();
-    if (allSeries.length === 0) return;
+    void (async () => {
+      const allSeries = await getAllSeries();
+      if (allSeries.length === 0) return;
 
-    const flags = loadUpdateFlags();
-    const now = Date.now();
+      await initUpdateFlagStore();
+      const flags = getUpdateFlags();
+      const now = Date.now();
+      const needsCheck = allSeries.filter((s) => {
+        const flag = flags[s.slug];
+        return !flag || now - flag.checkedAt > RECHECK_INTERVAL;
+      });
 
-    // Filter to series that need checking
-    const needsCheck = allSeries.filter((s) => {
-      const flag = flags[s.slug];
-      return !flag || now - flag.checkedAt > RECHECK_INTERVAL;
-    });
+      if (needsCheck.length === 0) return;
 
-    if (needsCheck.length === 0) return;
+      const worker = new Worker("/update-checker-worker.js");
+      checkerRef.current = worker;
 
-    const worker = new Worker("/update-checker-worker.js");
-    checkerRef.current = worker;
+      worker.onmessage = (e) => {
+        const msg = e.data;
+        if (msg.type === "result") {
+          setUpdateFlags((prev) => {
+            const next: UpdateFlags = {
+              ...prev,
+              [msg.slug]: { newCount: msg.newCount, checkedAt: Date.now() },
+            };
+            setUpdateFlag(msg.slug, next[msg.slug]);
+            return next;
+          });
+        }
+        if (msg.type === "done") {
+          worker.terminate();
+          if (checkerRef.current === worker) checkerRef.current = null;
+        }
+      };
 
-    worker.onmessage = (e) => {
-      const msg = e.data;
-      if (msg.type === "result") {
-        setUpdateFlags((prev) => {
-          const next = {
-            ...prev,
-            [msg.slug]: { newCount: msg.newCount, checkedAt: Date.now() },
-          };
-          saveUpdateFlags(next);
-          return next;
-        });
-      }
-      if (msg.type === "done") {
+      worker.onerror = () => {
         worker.terminate();
         if (checkerRef.current === worker) checkerRef.current = null;
-      }
-    };
+      };
 
-    worker.onerror = () => {
-      worker.terminate();
-      if (checkerRef.current === worker) checkerRef.current = null;
-    };
-
-    worker.postMessage({
-      type: "check",
-      series: needsCheck.map((s) => ({
-        slug: s.slug,
-        sourceUrl: s.sourceUrl,
-        source: s.source || "manhwazone",
-        sourceId: s.sourceId,
-        totalChapters: s.totalChapters,
-        preferredLanguage: s.preferredLanguage || "en",
-      })),
-      origin: window.location.origin,
-    });
+      worker.postMessage({
+        type: "check",
+        series: needsCheck.map((s) => ({
+          slug: s.slug,
+          sourceUrl: s.sourceUrl,
+          source: s.source || "manhwazone",
+          sourceId: s.sourceId,
+          totalChapters: s.totalChapters,
+          preferredLanguage: s.preferredLanguage || "en",
+        })),
+        origin: window.location.origin,
+      });
+    })();
   }, []); // Run once on mount
 
   const clearUpdateFlag = useCallback((slug: string) => {
     setUpdateFlags((prev) => {
       if (!prev[slug] || prev[slug].newCount === 0) return prev;
       const next = { ...prev, [slug]: { ...prev[slug], newCount: 0 } };
-      saveUpdateFlags(next);
+      clearUpdateFlagValue(slug);
       return next;
     });
   }, []);
 
-  const sendWorkerScrapeStart = useCallback((slug: string) => {
-    const series = getSeries(slug);
-    const allChapters = getChapters(slug);
+  const sendWorkerScrapeStart = useCallback(async (slug: string) => {
+    const series = await getSeries(slug);
+    const allChapters = await getChapters(slug);
     const unsynced = allChapters.filter((ch) => ch.imageUrls.length === 0);
     const alreadySynced = allChapters.length - unsynced.length;
 
@@ -233,8 +223,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             imageUrls: [],
             syncedAt: null,
           };
-          saveChapter(slug, stub);
-          updateSeriesTotalChapters(slug, msg.discoveredCount);
+          void saveChapter(slug, stub);
+          void updateSeriesTotalChapters(slug, msg.discoveredCount);
           setState((prev) => ({
             ...prev,
             phase: "discovering",
@@ -246,7 +236,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         case "discovery_done": {
           if (!slug) break;
           // Transition to scraping phase
-          sendWorkerScrapeStart(slug);
+          void sendWorkerScrapeStart(slug);
           break;
         }
 
@@ -259,7 +249,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             imageUrls: msg.imageUrls,
             syncedAt: Date.now(),
           };
-          saveChapter(slug, full);
+          void saveChapter(slug, full);
           setState((prev) => ({
             ...prev,
             completed: msg.completed,
@@ -315,15 +305,16 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   const startSync = useCallback(
     (slug: string) => {
+      void (async () => {
       if (state.phase !== "idle") return;
 
-      const series = getSeries(slug);
+      const series = await getSeries(slug);
       if (!series) return;
 
       // Clear update flag when starting sync
       clearUpdateFlag(slug);
 
-      const allChapters = getChapters(slug);
+      const allChapters = await getChapters(slug);
       const unsynced = allChapters.filter((ch) => ch.imageUrls.length === 0);
       const alreadySynced = allChapters.length - unsynced.length;
 
@@ -386,6 +377,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           cfProxyUrl: CF_PROXY_URL,
         });
       }
+      })();
     },
     [state.phase, getWorker, clearUpdateFlag]
   );

@@ -55,7 +55,8 @@ test.beforeEach(async ({ page }) => {
 test("home route renders", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("app-shell").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: /manga reader/i })).toBeVisible();
+  await expect(page.getByRole("img", { name: /manga blast/i })).toBeVisible();
+  await expect(page.getByText(/manga blast/i)).toBeVisible();
 });
 
 test("theme toggle persists preference", async ({ page }) => {

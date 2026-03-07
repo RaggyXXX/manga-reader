@@ -22,15 +22,17 @@ export default function ReaderPage() {
   const [allChapterNums, setAllChapterNums] = useState<number[]>([]);
 
   useEffect(() => {
-    const chapters = getChapters(slug);
-    setAllChapterNums(chapters.map((ch) => ch.number).sort((a, b) => a - b));
+    void (async () => {
+      const chapters = await getChapters(slug);
+      setAllChapterNums(chapters.map((ch) => ch.number).sort((a, b) => a - b));
+    })();
   }, [slug]);
 
   const fetchChapter = useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    const ch = getChapter(slug, chapterNum);
+    const ch = await getChapter(slug, chapterNum);
     if (!ch) {
       setError("Chapter not found.");
       setLoading(false);
@@ -38,7 +40,7 @@ export default function ReaderPage() {
     }
 
     setChapterTitle(ch.title);
-    const series = getSeries(slug);
+    const series = await getSeries(slug);
     const source = series?.source || "manhwazone";
 
     const needsRefresh =
@@ -56,7 +58,7 @@ export default function ReaderPage() {
     try {
       const images = await scrapeChapterImages(ch.url, source);
       if (images.length > 0) {
-        saveChapter(slug, { ...ch, imageUrls: images, syncedAt: Date.now() });
+        await saveChapter(slug, { ...ch, imageUrls: images, syncedAt: Date.now() });
         setImageUrls(images.map((u) => imageProxyUrl(u, source)));
       } else {
         setError("No images found.");

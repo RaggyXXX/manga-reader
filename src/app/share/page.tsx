@@ -10,10 +10,6 @@ export default function SharePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const url = searchParams.get("url");
-  const source = searchParams.get("source") as MangaSource | null;
-  const sourceId = searchParams.get("sourceId");
-
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<{
     title: string;
@@ -23,37 +19,33 @@ export default function SharePage() {
     sourceId?: string;
   } | null>(null);
   const [adding, setAdding] = useState(false);
+  const loading = !!url && !error && !previewData;
 
   useEffect(() => {
-    if (!url) {
-      setError("No URL provided");
-      setLoading(false);
-      return;
-    }
+    if (!url) return;
 
-    // Check if series already in library
-    const existing = getAllSeries();
-    const duplicate = existing.find((s) => s.sourceUrl === url);
-    if (duplicate) {
-      router.replace(`/series/${duplicate.slug}`);
-      return;
-    }
+    void (async () => {
+      const existing = await getAllSeries();
+      const duplicate = existing.find((s) => s.sourceUrl === url);
+      if (duplicate) {
+        router.replace(`/series/${duplicate.slug}`);
+        return;
+      }
 
-    // Discover the series
-    discoverSeries(url)
-      .then((discovered) => {
-        setPreviewData({
-          title: discovered.title,
-          coverUrl: discovered.coverUrl,
-          sourceUrl: discovered.sourceUrl,
-          source: discovered.source,
-          sourceId: discovered.sourceId,
+      discoverSeries(url)
+        .then((discovered) => {
+          setPreviewData({
+            title: discovered.title,
+            coverUrl: discovered.coverUrl,
+            sourceUrl: discovered.sourceUrl,
+            source: discovered.source,
+            sourceId: discovered.sourceId,
+          });
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : "Failed to load series");
         });
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load series");
-      })
-      .finally(() => setLoading(false));
+    })();
   }, [url, router]);
 
   const handleAdd = async (preferredLanguage?: string) => {
@@ -67,7 +59,7 @@ export default function SharePage() {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      saveSeries({
+      await saveSeries({
         slug,
         title: discovered.title,
         coverUrl: discovered.coverUrl,
@@ -107,6 +99,23 @@ export default function SharePage() {
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center space-y-3">
           <p className="text-sm text-destructive">{error}</p>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="text-sm text-primary underline"
+          >
+            Go to Library
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!url) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="text-center space-y-3">
+          <p className="text-sm text-destructive">No URL provided</p>
           <button
             type="button"
             onClick={() => router.push("/")}

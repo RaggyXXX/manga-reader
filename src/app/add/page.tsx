@@ -198,13 +198,15 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
   }, [results, sourceFilter, sortMode, minChapters]);
 
   const handleClickResult = (result: SearchResult) => {
-    const existing = getAllSeries();
-    const duplicate = existing.find((s) => s.sourceUrl === result.sourceUrl);
-    if (duplicate) {
-      router.push(`/series/${duplicate.slug}`);
-      return;
-    }
-    setPreview(result);
+    void (async () => {
+      const existing = await getAllSeries();
+      const duplicate = existing.find((s) => s.sourceUrl === result.sourceUrl);
+      if (duplicate) {
+        router.push(`/series/${duplicate.slug}`);
+        return;
+      }
+      setPreview(result);
+    })();
   };
 
   const handleConfirmAdd = async (preferredLanguage?: string) => {
@@ -231,7 +233,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
         sourceId: discovered.sourceId,
         ...(preferredLanguage ? { preferredLanguage } : {}),
       };
-      saveSeries(newSeries);
+      await saveSeries(newSeries);
 
       // Pre-cache cover image
       if (discovered.coverUrl) {

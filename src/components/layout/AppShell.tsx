@@ -37,19 +37,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isOnTabPage = isTabPath(pathname);
   const isSubpage = !isTabPath(pathname) && pathname !== "/";
 
-  // Sync activeTab when pathname changes (e.g. browser back to a tab)
-  useEffect(() => {
-    if (isTabPath(pathname)) {
-      setActiveTab(pathname);
-      setMountedTabs((prev) => {
-        if (prev.has(pathname)) return prev;
-        const next = new Set(prev);
-        next.add(pathname);
-        return next;
-      });
-    }
-  }, [pathname]);
-
   // Handle popstate for browser Back/Forward
   useEffect(() => {
     const handlePopState = () => {
@@ -87,7 +74,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   const [isOffline, setIsOffline] = useState(() => typeof window !== "undefined" ? !navigator.onLine : false);
-
   useEffect(() => {
     applyThemeClass(theme);
   }, [theme]);

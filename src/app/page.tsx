@@ -33,7 +33,6 @@ import { SeriesCard } from "@/components/SeriesCard";
 import { FolderCard } from "@/components/FolderCard";
 import { ContinueReading } from "@/components/ContinueReading";
 import { QuickContinue } from "@/components/QuickContinue";
-import { StatusSelector } from "@/components/StatusSelector";
 import { BatchActionBar } from "@/components/BatchActionBar";
 import { Button } from "@/components/ui/button";
 import { useSyncContext } from "@/contexts/SyncContext";
@@ -42,10 +41,8 @@ import {
   syncWithSeries,
   createFolder,
   deleteFolder,
-  renameFolder,
   moveToFolder,
   createFolderFromDrop,
-  reorderItems,
   type FolderTree,
   type Folder,
 } from "@/lib/folder-store";
@@ -90,10 +87,7 @@ export function LibraryPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // --- Folder state ---
-  const [folderTree, setFolderTree] = useState<FolderTree>(() => {
-    const slugs = getAllSeries().map(s => s.slug);
-    return syncWithSeries(slugs);
-  });
+  const [folderTree, setFolderTree] = useState<FolderTree>(() => getFolderTree());
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [jiggleMode, setJiggleMode] = useState(false);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
@@ -106,15 +100,14 @@ export function LibraryPage() {
 
   // --- Refresh helpers ---
   const refreshFolderTree = useCallback(() => {
-    const slugs = getAllSeries().map(s => s.slug);
+    const slugs = getAllSeries().map((s) => s.slug);
     setFolderTree(syncWithSeries(slugs));
   }, []);
 
   const refreshSeries = useCallback(() => {
-    setSeries(getAllSeries());
-    // Also sync folder tree when series change
-    const slugs = getAllSeries().map(s => s.slug);
-    setFolderTree(syncWithSeries(slugs));
+    const nextSeries = getAllSeries();
+    setSeries(nextSeries);
+    setFolderTree(syncWithSeries(nextSeries.map((s) => s.slug)));
   }, []);
 
   // --- Visible items in folder mode ---
@@ -206,7 +199,9 @@ export function LibraryPage() {
   const handleBatchFavorite = useCallback(() => {
     for (const slug of selectedSlugs) {
       const s = series.find((x) => x.slug === slug);
-      if (s && !s.isFavorite) toggleFavorite(slug);
+      if (s && !s.isFavorite) {
+        toggleFavorite(slug);
+      }
     }
     cancelSelection();
     refreshSeries();
@@ -610,7 +605,7 @@ export function LibraryPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      const f = createFolder("New Folder", currentFolderId);
+                      createFolder("New Folder", currentFolderId);
                       refreshFolderTree();
                     }}
                     className="flex items-center gap-1 rounded-lg border border-primary bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"

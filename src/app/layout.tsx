@@ -7,6 +7,7 @@ import { SyncProvider } from "@/contexts/SyncContext";
 import { TourProvider } from "@/contexts/TourContext";
 import { SyncProgressBar } from "@/components/SyncProgressBar";
 import { AppShell } from "@/components/layout/AppShell";
+import { StorageBootstrap } from "@/components/StorageBootstrap";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -60,14 +61,16 @@ export default function RootLayout({
         className="bg-background font-sans text-foreground antialiased"
         style={{ fontFamily: "var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
       >
-        <SyncProvider>
-          <SyncProgressBar />
-          <TourProvider>
-            <ToastProvider>
-              <AppShell>{children}</AppShell>
-            </ToastProvider>
-          </TourProvider>
-        </SyncProvider>
+        <StorageBootstrap>
+          <SyncProvider>
+            <SyncProgressBar />
+            <TourProvider>
+              <ToastProvider>
+                <AppShell>{children}</AppShell>
+              </ToastProvider>
+            </TourProvider>
+          </SyncProvider>
+        </StorageBootstrap>
         <ServiceWorkerRegistrar />
       </body>
     </html>

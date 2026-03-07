@@ -12,13 +12,12 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { driver, type DriveStep, type Driver } from "driver.js";
 import "driver.js/dist/driver.css";
+import { addBookmark, getBookmarks, removeBookmark } from "@/lib/bookmark-store";
+import { deleteSeries, getAllSeries, saveChapters, saveSeries } from "@/lib/manga-store";
+import { clearSeriesProgress, markAllChaptersRead, saveScrollPosition } from "@/lib/reading-progress";
 
 const TOUR_DONE_KEY = "tour-completed";
 const DEMO_SLUG = "demo-tutorial-manga";
-const SERIES_KEY = "manga-series";
-const CHAPTERS_KEY = "manga-chapters";
-const PROGRESS_KEY = "manga-reader-progress";
-const BOOKMARKS_KEY = "manga-bookmarks";
 
 type TourMode = "short" | "long";
 
@@ -38,10 +37,9 @@ export function useTour() {
 
 function injectDemoManga() {
   const now = Date.now();
-
-  const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
-  if (!seriesMap[DEMO_SLUG]) {
-    seriesMap[DEMO_SLUG] = {
+  const hasDemo = getAllSeries().some((series) => series.slug === DEMO_SLUG);
+  if (!hasDemo) {
+    saveSeries({
       slug: DEMO_SLUG,
       title: "Tutorial: Example Manga",
       coverUrl: "/mangablast.png",
@@ -49,70 +47,31 @@ function injectDemoManga() {
       totalChapters: 3,
       addedAt: now,
       source: "manhwazone",
-    };
-    localStorage.setItem(SERIES_KEY, JSON.stringify(seriesMap));
+    });
   }
+  saveChapters(DEMO_SLUG, [
+    { number: 1, title: "Chapter 1: Getting Started", url: "", imageUrls: [], syncedAt: null },
+    { number: 2, title: "Chapter 2: Adding Series", url: "", imageUrls: [], syncedAt: null },
+    { number: 3, title: "Chapter 3: Reading", url: "", imageUrls: [], syncedAt: null },
+  ]);
+  markAllChaptersRead(DEMO_SLUG, [1, 2]);
+  saveScrollPosition(DEMO_SLUG, 1, { scrollPercent: 100, imageIndex: 12, timestamp: now - 3600000 });
+  saveScrollPosition(DEMO_SLUG, 2, { scrollPercent: 45, imageIndex: 5, timestamp: now - 600000 });
 
-  const chaptersMap = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || "{}");
-  if (!chaptersMap[DEMO_SLUG]) {
-    chaptersMap[DEMO_SLUG] = {
-      1: { number: 1, title: "Chapter 1: Getting Started", url: "", imageUrls: [], syncedAt: null },
-      2: { number: 2, title: "Chapter 2: Adding Series", url: "", imageUrls: [], syncedAt: null },
-      3: { number: 3, title: "Chapter 3: Reading", url: "", imageUrls: [], syncedAt: null },
-    };
-    localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
+  if (getBookmarks(DEMO_SLUG).length === 0) {
+    addBookmark(DEMO_SLUG, 1, 3, "Cool panel!");
+    addBookmark(DEMO_SLUG, 2, 0);
   }
-
-  const progressMap = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}");
-  progressMap[DEMO_SLUG] = {
-    lastReadChapter: 2,
-    readChapters: [1, 2],
-    chapterProgress: {
-      1: { scrollPercent: 100, imageIndex: 12, timestamp: now - 3600000 },
-      2: { scrollPercent: 45, imageIndex: 5, timestamp: now - 600000 },
-    },
-  };
-  localStorage.setItem(PROGRESS_KEY, JSON.stringify(progressMap));
-
-  const bookmarksMap = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || "{}");
-  bookmarksMap[DEMO_SLUG] = [
-    {
-      id: "demo-bookmark-1",
-      slug: DEMO_SLUG,
-      chapterNumber: 1,
-      imageIndex: 3,
-      note: "Cool panel!",
-      createdAt: now - 1800000,
-    },
-    {
-      id: "demo-bookmark-2",
-      slug: DEMO_SLUG,
-      chapterNumber: 2,
-      imageIndex: 0,
-      createdAt: now - 300000,
-    },
-  ];
-  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarksMap));
 
   window.dispatchEvent(new Event("tour-storage-updated"));
 }
 
 function removeDemoManga() {
-  const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
-  delete seriesMap[DEMO_SLUG];
-  localStorage.setItem(SERIES_KEY, JSON.stringify(seriesMap));
-
-  const chaptersMap = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || "{}");
-  delete chaptersMap[DEMO_SLUG];
-  localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chaptersMap));
-
-  const progressMap = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}");
-  delete progressMap[DEMO_SLUG];
-  localStorage.setItem(PROGRESS_KEY, JSON.stringify(progressMap));
-
-  const bookmarksMap = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || "{}");
-  delete bookmarksMap[DEMO_SLUG];
-  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarksMap));
+  deleteSeries(DEMO_SLUG);
+  clearSeriesProgress(DEMO_SLUG);
+  for (const bookmark of getBookmarks(DEMO_SLUG)) {
+    removeBookmark(DEMO_SLUG, bookmark.id);
+  }
 
   window.dispatchEvent(new Event("tour-storage-updated"));
 }
@@ -123,8 +82,7 @@ interface TourPhase {
 }
 
 function buildTourPhases(mode: TourMode): TourPhase[] {
-  const seriesMap = JSON.parse(localStorage.getItem(SERIES_KEY) || "{}");
-  const realSlugs = Object.keys(seriesMap).filter((s) => s !== DEMO_SLUG);
+  const realSlugs = getAllSeries().map((series) => series.slug).filter((slug) => slug !== DEMO_SLUG);
   const hasRealLibrary = realSlugs.length > 0;
 
   if (mode === "short") {

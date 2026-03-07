@@ -18,7 +18,7 @@ export function DeleteSeriesButton({ seriesSlug, seriesTitle }: Props) {
 
   const handleDelete = async () => {
     setDeleting(true);
-    deleteSeries(seriesSlug);
+    await deleteSeries(seriesSlug);
     clearSeriesProgress(seriesSlug);
     router.push("/");
   };

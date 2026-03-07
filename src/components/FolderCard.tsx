@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { FolderOpen, ChevronRight, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -19,13 +21,21 @@ interface FolderCardProps {
 
 /** Resolve up to 4 cover URLs from the child slugs. */
 function useChildCovers(childSlugs: string[]): { url: string; source?: string }[] {
-  const covers: { url: string; source?: string }[] = [];
-  for (const slug of childSlugs.slice(0, 4)) {
-    const s = getSeries(slug);
-    if (s?.coverUrl) {
-      covers.push({ url: imageProxyUrl(s.coverUrl, s.source), source: s.source });
-    }
-  }
+  const [covers, setCovers] = useState<{ url: string; source?: string }[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      const nextCovers: { url: string; source?: string }[] = [];
+      for (const slug of childSlugs.slice(0, 4)) {
+        const s = await getSeries(slug);
+        if (s?.coverUrl) {
+          nextCovers.push({ url: imageProxyUrl(s.coverUrl, s.source), source: s.source });
+        }
+      }
+      setCovers(nextCovers);
+    })();
+  }, [childSlugs]);
+
   return covers;
 }
 
@@ -132,14 +142,16 @@ export function FolderCard({
             {slots.map((url, i) => (
               <div
                 key={`${id}-slot-${i}`}
-                className="overflow-hidden rounded-lg bg-muted/60"
+                className="relative overflow-hidden rounded-lg bg-muted/60"
               >
                 {url ? (
-                  <img
+                  <Image
                     src={url}
                     alt=""
-                    className="h-full w-full object-cover"
-                    loading="lazy"
+                    fill
+                    sizes="(max-width: 640px) 25vw, 10vw"
+                    className="object-cover"
+                    unoptimized
                     referrerPolicy="no-referrer"
                   />
                 ) : (

@@ -1,4 +1,6 @@
-const STORAGE_KEY = "manga-reader-progress";
+"use client";
+
+import { dbStores, deleteRecord, ensureLegacyDataMigrated, getAllFromStore, putRecord, queueMicrotaskSafe } from "./db";
 
 export interface ChapterPosition {
   scrollPercent: number;
@@ -14,28 +16,67 @@ export interface SeriesProgress {
 
 type AllProgress = Record<string, SeriesProgress>;
 
-function loadAll(): AllProgress {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+let progressCache: AllProgress = {};
+let ready = false;
+let initPromise: Promise<void> | null = null;
+let writeQueue: Promise<void> = Promise.resolve();
+
+function enqueueWrite(operation: () => Promise<void>) {
+  writeQueue = writeQueue.then(operation).catch(() => {});
 }
 
-function saveAll(data: AllProgress) {
+function emitStorageUpdate() {
   if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // localStorage full or unavailable
+  queueMicrotaskSafe(() => {
+    window.dispatchEvent(new Event("storage-updated"));
+  });
+}
+
+function cloneProgress(progress: SeriesProgress): SeriesProgress {
+  return {
+    lastReadChapter: progress.lastReadChapter,
+    readChapters: [...progress.readChapters],
+    chapterProgress: { ...progress.chapterProgress },
+  };
+}
+
+function persistProgress(slug: string) {
+  const progress = progressCache[slug];
+  if (!progress) {
+    enqueueWrite(() => deleteRecord(dbStores.readingProgress, slug));
+    return;
   }
+  enqueueWrite(() => putRecord(dbStores.readingProgress, { slug, ...cloneProgress(progress) }));
+}
+
+export async function initReadingProgressStore(): Promise<void> {
+  if (ready) return;
+  if (!initPromise) {
+    initPromise = (async () => {
+      await ensureLegacyDataMigrated();
+      const records = await getAllFromStore<(SeriesProgress & { slug: string })>(dbStores.readingProgress);
+      const next: AllProgress = {};
+      for (const record of records) {
+        const { slug, ...progress } = record;
+        next[slug] = cloneProgress(progress);
+      }
+      progressCache = next;
+      ready = true;
+    })();
+  }
+  await initPromise;
+}
+
+export function __resetReadingProgressStoreForTests() {
+  progressCache = {};
+  ready = false;
+  initPromise = null;
+  writeQueue = Promise.resolve();
 }
 
 export function getProgress(slug: string): SeriesProgress | null {
-  const all = loadAll();
-  return all[slug] ?? null;
+  const progress = progressCache[slug];
+  return progress ? cloneProgress(progress) : null;
 }
 
 export function getReadChapters(slug: string): number[] {
@@ -47,52 +88,43 @@ export function getLastReadChapter(slug: string): number | null {
 }
 
 export function markChapterRead(slug: string, chapter: number) {
-  const all = loadAll();
-  if (!all[slug]) {
-    all[slug] = { lastReadChapter: chapter, readChapters: [chapter], chapterProgress: {} };
-  } else {
-    if (!all[slug].readChapters.includes(chapter)) {
-      all[slug].readChapters.push(chapter);
-    }
-    all[slug].lastReadChapter = chapter;
+  const progress = progressCache[slug] ?? { lastReadChapter: chapter, readChapters: [], chapterProgress: {} };
+  if (!progress.readChapters.includes(chapter)) {
+    progress.readChapters.push(chapter);
   }
-  saveAll(all);
+  progress.lastReadChapter = chapter;
+  progressCache[slug] = progress;
+  persistProgress(slug);
+  emitStorageUpdate();
 }
 
 export function saveScrollPosition(slug: string, chapter: number, position: ChapterPosition) {
-  const all = loadAll();
-  if (!all[slug]) {
-    all[slug] = { lastReadChapter: chapter, readChapters: [], chapterProgress: {} };
-  }
-  all[slug].chapterProgress[chapter] = position;
-  saveAll(all);
+  const progress = progressCache[slug] ?? { lastReadChapter: chapter, readChapters: [], chapterProgress: {} };
+  progress.chapterProgress[chapter] = position;
+  progress.lastReadChapter = chapter;
+  progressCache[slug] = progress;
+  persistProgress(slug);
 }
 
 export function getScrollPosition(slug: string, chapter: number): ChapterPosition | null {
-  const progress = getProgress(slug);
-  return progress?.chapterProgress[chapter] ?? null;
+  return getProgress(slug)?.chapterProgress[chapter] ?? null;
 }
 
 export function markAllChaptersRead(slug: string, chapterNumbers: number[]) {
-  const all = loadAll();
   const last = chapterNumbers.length > 0 ? Math.max(...chapterNumbers) : 0;
-  if (!all[slug]) {
-    all[slug] = { lastReadChapter: last, readChapters: [...chapterNumbers], chapterProgress: {} };
-  } else {
-    const merged = new Set([...all[slug].readChapters, ...chapterNumbers]);
-    all[slug].readChapters = Array.from(merged);
-    all[slug].lastReadChapter = last;
-  }
-  saveAll(all);
+  const progress = progressCache[slug] ?? { lastReadChapter: last, readChapters: [], chapterProgress: {} };
+  progress.readChapters = Array.from(new Set([...progress.readChapters, ...chapterNumbers]));
+  progress.lastReadChapter = last;
+  progressCache[slug] = progress;
+  persistProgress(slug);
+  emitStorageUpdate();
 }
 
 export function clearSeriesProgress(slug: string) {
-  const all = loadAll();
-  delete all[slug];
-  saveAll(all);
+  delete progressCache[slug];
+  persistProgress(slug);
+  emitStorageUpdate();
 }
-
-/* ── Reading statistics ─────────────────────────────── */
 
 export interface ReadingStats {
   totalChaptersRead: number;
@@ -107,24 +139,19 @@ export interface ReadingStats {
 }
 
 export function getReadingStats(): ReadingStats {
-  const all = loadAll();
-
+  const all = progressCache;
   let totalChaptersRead = 0;
   let totalPagesViewed = 0;
-
   const seriesStats: ReadingStats["seriesStats"] = [];
 
   for (const [slug, progress] of Object.entries(all)) {
     const chaptersRead = progress.readChapters.length;
     totalChaptersRead += chaptersRead;
 
-    // Sum up all imageIndex values from chapterProgress entries (approximate page count)
     let lastReadAt = 0;
     for (const pos of Object.values(progress.chapterProgress)) {
-      totalPagesViewed += pos.imageIndex + 1; // imageIndex is 0-based
-      if (pos.timestamp > lastReadAt) {
-        lastReadAt = pos.timestamp;
-      }
+      totalPagesViewed += pos.imageIndex + 1;
+      if (pos.timestamp > lastReadAt) lastReadAt = pos.timestamp;
     }
 
     seriesStats.push({
@@ -135,16 +162,12 @@ export function getReadingStats(): ReadingStats {
     });
   }
 
-  // Sort by most recently read first
   seriesStats.sort((a, b) => b.lastReadAt - a.lastReadAt);
-
-  // Estimate reading time: ~30 seconds per page
-  const estimatedMinutes = Math.round(totalPagesViewed * 0.5);
 
   return {
     totalChaptersRead,
     totalPagesViewed,
-    estimatedMinutes,
+    estimatedMinutes: Math.round(totalPagesViewed * 0.5),
     seriesStats,
   };
 }

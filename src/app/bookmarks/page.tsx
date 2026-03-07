@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, useMemo } from "react";
 import { getAllBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmark-store";
 import { getSeries, getChapter } from "@/lib/manga-store";
@@ -10,6 +11,8 @@ import Link from "next/link";
 
 export function BookmarksPage() {
   const [allBookmarks, setAllBookmarks] = useState(() => getAllBookmarks());
+  const [seriesBySlug, setSeriesBySlug] = useState<Record<string, Awaited<ReturnType<typeof getSeries>>>>({});
+  const [chapterImageByKey, setChapterImageByKey] = useState<Record<string, string | null>>({});
   const [filterSlug, setFilterSlug] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
 
@@ -19,6 +22,27 @@ export function BookmarksPage() {
     window.addEventListener("tour-storage-updated", handler);
     return () => window.removeEventListener("tour-storage-updated", handler);
   }, []);
+
+  useEffect(() => {
+    const flat = Object.values(allBookmarks).flat();
+    const slugs = Array.from(new Set(flat.map((bookmark) => bookmark.slug)));
+    void (async () => {
+      const seriesEntries = await Promise.all(slugs.map(async (slug) => [slug, await getSeries(slug)] as const));
+      setSeriesBySlug(Object.fromEntries(seriesEntries));
+
+      const chapterEntries = await Promise.all(
+        flat.map(async (bookmark) => {
+          const chapter = await getChapter(bookmark.slug, bookmark.chapterNumber);
+          const series = seriesEntries.find(([slug]) => slug === bookmark.slug)?.[1] ?? null;
+          const image = chapter?.imageUrls[bookmark.imageIndex]
+            ? imageProxyUrl(chapter.imageUrls[bookmark.imageIndex], series?.source)
+            : null;
+          return [`${bookmark.slug}:${bookmark.chapterNumber}:${bookmark.imageIndex}`, image] as const;
+        }),
+      );
+      setChapterImageByKey(Object.fromEntries(chapterEntries));
+    })();
+  }, [allBookmarks]);
 
   // Flatten all bookmarks into a single sorted list
   const flatBookmarks = useMemo(() => {
@@ -34,22 +58,14 @@ export function BookmarksPage() {
   const seriesOptions = useMemo(() => {
     const slugs = Object.keys(allBookmarks);
     return slugs.map((slug) => {
-      const series = getSeries(slug);
+      const series = seriesBySlug[slug];
       return { slug, title: series?.title || slug.replace(/-/g, " ") };
     });
-  }, [allBookmarks]);
+  }, [allBookmarks, seriesBySlug]);
 
   const handleDelete = (slug: string, id: string) => {
     removeBookmark(slug, id);
     setAllBookmarks(getAllBookmarks());
-  };
-
-  const getImageUrl = (bookmark: Bookmark): string | null => {
-    const chapter = getChapter(bookmark.slug, bookmark.chapterNumber);
-    if (!chapter || !chapter.imageUrls[bookmark.imageIndex]) return null;
-    const series = getSeries(bookmark.slug);
-    const source = series?.source;
-    return imageProxyUrl(chapter.imageUrls[bookmark.imageIndex], source);
   };
 
   return (
@@ -117,20 +133,22 @@ export function BookmarksPage() {
       {flatBookmarks.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" data-tour="bookmarks-grid">
           {flatBookmarks.map((bookmark) => {
-            const series = getSeries(bookmark.slug);
+            const series = seriesBySlug[bookmark.slug];
             const seriesTitle = series?.title || bookmark.slug.replace(/-/g, " ");
-            const imgUrl = getImageUrl(bookmark);
+            const imgUrl = chapterImageByKey[`${bookmark.slug}:${bookmark.chapterNumber}:${bookmark.imageIndex}`] ?? null;
 
             return (
               <Card key={bookmark.id} className="overflow-hidden">
                 {/* Thumbnail */}
-                <div className="aspect-[3/4] overflow-hidden bg-muted">
+                <div className="relative aspect-[3/4] overflow-hidden bg-muted">
                   {imgUrl ? (
-                    <img
+                    <Image
                       src={imgUrl}
                       alt={`Page ${bookmark.imageIndex + 1}`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
+                      fill
+                      sizes="(max-width: 640px) 50vw, 33vw"
+                      className="object-cover"
+                      unoptimized
                       referrerPolicy="no-referrer"
                     />
                   ) : (

@@ -33,35 +33,69 @@ function formatReadingTime(minutes: number): string {
 export function StatsPage() {
   const { startTour } = useTour();
   const [, setRefreshKey] = useState(0);
-  const stats = getReadingStats();
-  const allSeries = getAllSeries();
+  const [stats, setStats] = useState(() => getReadingStats());
+  const [seriesList, setSeriesList] = useState<Array<{ slug: string; title: string; cachedCount: number; totalChapters: number }>>([]);
+
+  useEffect(() => {
+    void (async () => {
+      setStats(getReadingStats());
+      const allSeries = await getAllSeries();
+      const nextSeriesList = await Promise.all(
+        allSeries.map(async (s) => {
+          const chapters = await getChapters(s.slug);
+          return {
+            slug: s.slug,
+            title: s.title,
+            cachedCount: chapters.filter((ch) => ch.imageUrls.length > 0).length,
+            totalChapters: s.totalChapters || chapters.length,
+          };
+        }),
+      );
+      setSeriesList(nextSeriesList);
+    })();
+  }, []);
 
   // Refresh when tour injects/removes demo data
   useEffect(() => {
-    const handler = () => setRefreshKey((k) => k + 1);
+    const handler = () => {
+      setRefreshKey((k) => k + 1);
+      void (async () => {
+        setStats(getReadingStats());
+        const allSeries = await getAllSeries();
+        const nextSeriesList = await Promise.all(
+          allSeries.map(async (s) => {
+            const chapters = await getChapters(s.slug);
+            return {
+              slug: s.slug,
+              title: s.title,
+              cachedCount: chapters.filter((ch) => ch.imageUrls.length > 0).length,
+              totalChapters: s.totalChapters || chapters.length,
+            };
+          }),
+        );
+        setSeriesList(nextSeriesList);
+      })();
+    };
     window.addEventListener("tour-storage-updated", handler);
     return () => window.removeEventListener("tour-storage-updated", handler);
   }, []);
-
-  const seriesList = allSeries.map((s) => ({
-    slug: s.slug,
-    title: s.title,
-    cachedCount: getChapters(s.slug).filter((ch) => ch.imageUrls.length > 0).length,
-    totalChapters: s.totalChapters || getChapters(s.slug).length,
-  }));
 
   const hasData = stats.totalChaptersRead > 0;
   const maxChapters = hasData ? Math.max(...stats.seriesStats.map((s) => s.chaptersRead)) : 1;
 
   const clearSeries = (slug: string) => {
-    deleteStoredSeries(slug);
-    window.location.reload();
+    void (async () => {
+      await deleteStoredSeries(slug);
+      window.location.reload();
+    })();
   };
 
   const clearAll = () => {
     if (!confirm("Delete all cached series data? This cannot be undone.")) return;
-    seriesList.forEach((s) => deleteStoredSeries(s.slug));
-    window.location.reload();
+    void (async () => {
+      await Promise.all(seriesList.map((s) => deleteStoredSeries(s.slug)));
+      window.location.reload();
+    })();
   };
 
   return (
