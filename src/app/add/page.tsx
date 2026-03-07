@@ -260,7 +260,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
     <>
       <div className="space-y-3">
         {/* Search input */}
-        <div className="relative">
+        <div className="relative" data-tour="add-search-input">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
@@ -291,7 +291,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
         </div>
 
         {/* Source filter */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative" ref={dropdownRef} data-tour="add-source-filter">
           <button
             type="button"
             onClick={() => setSourceDropdownOpen((v) => !v)}
@@ -425,7 +425,7 @@ function SearchMode({ router }: { router: ReturnType<typeof useRouter> }) {
       ) : null}
 
       {!searching && !searched && query.trim().length === 0 ? (
-        <section className="space-y-3" aria-label="Featured manga">
+        <section className="space-y-3" aria-label="Featured manga" data-tour="add-featured">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold tracking-tight">Featured</h2>
